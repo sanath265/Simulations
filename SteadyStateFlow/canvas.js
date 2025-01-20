@@ -18,13 +18,13 @@ const dischargeCoefficientValue = document.getElementById('dischargeCoefficientV
 const startPoint = {x: 20, y: 75};
 const containerHeight = 235;
 const containerWidth = 135;
+var waterHeight = (parseFloat(liquidHeightSlider.value) / 0.9) * 205;
 var diameter = (parseFloat(drainDiameterSlider.value) / 7) * 20;
 const currentPoint = {x: startPoint.x + 63, y: startPoint.y + containerHeight};
 const point1 = {x: currentPoint.x + 65, y: currentPoint.y + 14};
-const point2 = {x: point1.x + diameter, y: currentPoint.y + 14};
+var point2 = {x: point1.x + diameter, y: currentPoint.y + 14};
 const tapDistance = 40;
 const tapKnobHeight = 7.5
-var waterHeight = (parseFloat(liquidHeightSlider.value) / 0.9) * 205;
 const waterStartPoint = {x: startPoint.x + 63, y: startPoint.y + 14 + 235};
 
 setupSliders();
@@ -54,17 +54,19 @@ function setupSliders() {
 }
 
 function setupValues() {
-    diameter = (parseFloat(drainDiameterSlider.value) / 7) * 20;
     waterHeight = (parseFloat(liquidHeightSlider.value) / 0.9) * 205;
+    diameter = (parseFloat(drainDiameterSlider.value) / 7) * 20;
+    point2 = {x: point1.x + diameter, y: currentPoint.y + 14};
 }
 function setupCanvasSpace() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+    ctx.resetTransform()
+    ctx.textAlign = 'center'
+    ctx.font = '16px Arial'
     ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+    ctx.lineWidth = 2
     ctx.fillStyle = 'rgb(35, 137, 218)';
-    ctx.lineWidth = 2;
 }
 
 function drawTank() {
@@ -126,7 +128,6 @@ function drawWaterFlowFromTap() {
 }
 
 function fillTank() {
-
     const centerX = (startPoint.x + 80 + startPoint.x + 90) / 2;
     const centerY = (startPoint.y + 20 + startPoint.y + 20) / 2;
     const radiusX = Math.abs(startPoint.x + 90 - startPoint.x - 80) / 2;
@@ -165,6 +166,7 @@ function fillTank() {
     ctx.lineTo(waterStartPoint.x, startPoint.y + 235);
     ctx.closePath();
     ctx.fill();
+    
 }
 
 function drawTap() {
@@ -202,7 +204,6 @@ function drawArrows() {
     globalFunctions.drawText(point1.x + tapDistance + 10, point1.y + 28 + 15, 'c₀')
     ctx.fillStyle = 'rgb(35, 137, 218)';
 
-
     globalFunctions.drawDashedLine(startPoint.x + 63 + 65, startPoint.y + 235 + 28 + 14, startPoint.x + 10, startPoint.y + 235 + 28 + 14);
     globalFunctions.drawDashedLine(startPoint.x + 63, startPoint.y + 235 - waterHeight, startPoint.x + 10, startPoint.y + 235 - waterHeight);
   
@@ -216,12 +217,12 @@ function drawArrows() {
 
 function drawCanvas() {
     setupCanvasSpace();
+    setupValues();
     drawWaterFlowFromTap();
     drawTank();
     fillTank();
     drawTap();
     drawArrows();
-    setupValues();
     updateGraph();
 }
 
@@ -262,7 +263,6 @@ function calculateFlowRate(h, d, c0) {
 
 function drawAxes(hMax) {
     ctx.strokeStyle = 'black';
-    ctx.lineWidth = 1;
 
     ctx.beginPath();
     ctx.moveTo(graphStartX, canvasHeight - graphMargin);
@@ -313,7 +313,7 @@ function drawAxes(hMax) {
 // Draw graph
 function drawGraph(points) {
     ctx.strokeStyle = 'purple';
-    ctx.lineWidth = 2;
+    // ctx.lineWidth = 2;
 
     ctx.beginPath();
     points.forEach((point, index) => {

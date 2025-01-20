@@ -35,8 +35,9 @@ class ReusableMethods {
 
     drawText(x, y, text) {
         const { ctx } = this;
-        ctx.font = '16px Arial';
+        ctx.font = 'normal 16px Arial';
         ctx.fillStyle = 'black';
+        ctx.textAlign = 'center';
         ctx.fillText(text, x, y);
     }
 
