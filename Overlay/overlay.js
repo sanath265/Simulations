@@ -1,5 +1,5 @@
 document.getElementById('aboutButton').addEventListener('click', function() {
-    fetch('view/about.html')
+    fetch('/Overlay/view/about.html')
         .then(response => response.text())
         .then(html => {
             document.getElementById('overlayContainer').innerHTML = html;
@@ -8,7 +8,7 @@ document.getElementById('aboutButton').addEventListener('click', function() {
 });
 
 document.getElementById('detailsButton').addEventListener('click', function() {
-    fetch('view/details.html')
+    fetch('/Overlay/view/details.html')
         .then(response => response.text())
         .then(html => {
             document.getElementById('overlayContainer').innerHTML = html;
@@ -17,7 +17,7 @@ document.getElementById('detailsButton').addEventListener('click', function() {
 });
 
 document.getElementById('relatedLinksButton').addEventListener('click', function() {
-    fetch('view/relatedLinks.html')
+    fetch('/Overlay/view/relatedLinks.html')
         .then(response => response.text())
         .then(html => {
             document.getElementById('overlayContainer').innerHTML = html;
@@ -26,7 +26,7 @@ document.getElementById('relatedLinksButton').addEventListener('click', function
 });
 
 document.getElementById('citationsButton').addEventListener('click', function() {
-    fetch('view/citations.html')
+    fetch('/Overlay/view/citations.html')
         .then(response => response.text())
         .then(html => {
             document.getElementById('overlayContainer').innerHTML = html;

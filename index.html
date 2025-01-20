@@ -1,60 +1,52 @@
-<!-- main.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canvas Drawing</title>
-    <link rel="stylesheet" href="main.css">
-    <link rel="stylesheet" href="overlay.css">
+    <title></title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f8ff;
+        }
+        .container {
+            display: flex;
+            flex-direction: column; /* Arrange buttons vertically */
+            align-items: center; /* Center-align buttons */
+            gap: 20px; /* Space between buttons */
+            width: 100%; /* Optional: Full width for responsiveness */
+        }
+        button {
+            width: auto;
+            padding: 15px 20px; /* Add padding for better appearance */
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
 </head>
 <body>
-    <h1>Flow from a Tank at Constant Height</h1>
-
-    <!-- Buttons -->
-    <div class="button-container">
-        <button class="button" id="aboutButton">About</button>
-        <button class="button" id="detailsButton">Details</button>
-        <button class="button" id="relatedLinksButton">Related Links</button>
-        <button class="button" id="citationsButton">Citations</button>
+    <div class="container">
+        <button onclick="navigateToSteadyState()">Steady-State Flow from a Tank</button>
+        <button onclick="navigate()">Steady-State Flow from a Tank  V2</button>
     </div>
 
-    <div class="slider-container">
-        <div class="slider-wrapper">
-            <div class="slider-label-wrapper">
-                <label class="slider-label" for="liquidHeight">Liquid Height (m)</label>
-                <span class="slider-value" id="liquidHeightValue">0.18</span>
-            </div>
-            <input class="slider" type="range" id="liquidHeight" min="0.18" max="0.90" step="0.02" value="0.18">
-        </div>
-        <div class="slider-wrapper">
-            <div class="slider-label-wrapper">
-                <label class="slider-label" for="drainDiameter">Drain Diameter (cm)</label>
-                <span class="slider-value" id="drainDiameterValue">7.0</span>
-            </div>
-            <input class="slider" type="range" id="drainDiameter" min="2.0" max="7.0" step="0.1" value="7.0">
-        </div>
-        <div class="slider-wrapper">
-            <div class="slider-label-wrapper">
-                <label class="slider-label" for="liquidDensity">Liquid Density (kg/L)</label>
-                <span class="slider-value" id="liquidDensityValue">1.00</span>
-            </div>
-            <input class="slider" type="range" id="liquidDensity" min="0.8" max="1.50" step="0.02" value="1.00">
-        </div>
-        <div class="slider-wrapper">
-            <div class="slider-label-wrapper">
-                <label class="slider-label" for="dischargeCoefficient">Discharge Coefficient (c₀)</label>
-                <span class="slider-value" id="dischargeCoefficientValue">0.95</span>
-            </div>
-            <input class="slider" type="range" id="dischargeCoefficient" min="0.5" max="1.00" step="0.05" value="0.95">
-        </div>
-    </div>
-
-    <canvas id="centeredCanvas" width="624" height="455"></canvas>
-
-    <div id="overlayContainer"></div> 
-    
-    <script src="canvas.js"></script>
-    <script src="overlay.js"></script>
+    <script>
+        function navigateToSteadyState() {
+            window.location.href = "./SteadyStateFlow/index.html";
+        }
+    </script>
 </body>
 </html>

@@ -1,4 +1,9 @@
 // Select the canvas element
+import ReusableMethods from '../reusableMethods.js';
+
+const canvas = document.getElementById('centeredCanvas');
+const ctx = canvas.getContext('2d');
+const globalFunctions = new ReusableMethods(ctx);
 
 const liquidHeightSlider = document.getElementById('liquidHeight');
 const drainDiameterSlider = document.getElementById('drainDiameter');
@@ -9,32 +14,50 @@ const liquidHeightValue = document.getElementById('liquidHeightValue');
 const drainDiameterValue = document.getElementById('drainDiameterValue');
 const liquidDensityValue = document.getElementById('liquidDensityValue');
 const dischargeCoefficientValue = document.getElementById('dischargeCoefficientValue');
-const canvas = document.getElementById('centeredCanvas');
-const ctx = canvas.getContext('2d');
 
-liquidHeightSlider.oninput = function() {
-    liquidHeightValue.textContent = (liquidHeightSlider.value);
-    drawCanvas();
-    updateGraph();
-};
-drainDiameterSlider.oninput = function() {
-    drainDiameterValue.textContent = (drainDiameterSlider.value);
-    drawCanvas();
-    updateGraph();
-};
-liquidDensitySlider.oninput = function() {
-    liquidDensityValue.textContent = (liquidDensitySlider.value);
-    drawCanvas();
-    updateGraph();
-};
-dischargeCoefficientSlider.oninput = function() {
-    dischargeCoefficientValue.textContent = (dischargeCoefficientSlider.value);
-    drawCanvas();
-    updateGraph();
-};
+const startPoint = {x: 20, y: 75};
+const containerHeight = 235;
+const containerWidth = 135;
+var diameter = (parseFloat(drainDiameterSlider.value) / 7) * 20;
+const currentPoint = {x: startPoint.x + 63, y: startPoint.y + containerHeight};
+const point1 = {x: currentPoint.x + 65, y: currentPoint.y + 14};
+const point2 = {x: point1.x + diameter, y: currentPoint.y + 14};
+const tapDistance = 40;
+const tapKnobHeight = 7.5
+var waterHeight = (parseFloat(liquidHeightSlider.value) / 0.9) * 205;
+const waterStartPoint = {x: startPoint.x + 63, y: startPoint.y + 14 + 235};
+
+setupSliders();
 
 
-function drawCanvas() {
+function setupSliders() {
+    liquidHeightSlider.oninput = function() {
+        liquidHeightValue.textContent = (liquidHeightSlider.value);
+        drawCanvas();
+        updateGraph();
+    };
+    drainDiameterSlider.oninput = function() {
+        drainDiameterValue.textContent = (drainDiameterSlider.value);
+        drawCanvas();
+        updateGraph();
+    };
+    liquidDensitySlider.oninput = function() {
+        liquidDensityValue.textContent = (liquidDensitySlider.value);
+        drawCanvas();
+        updateGraph();
+    };
+    dischargeCoefficientSlider.oninput = function() {
+        dischargeCoefficientValue.textContent = (dischargeCoefficientSlider.value);
+        drawCanvas();
+        updateGraph();
+    };
+}
+
+function setupValues() {
+    diameter = (parseFloat(drainDiameterSlider.value) / 7) * 20;
+    waterHeight = (parseFloat(liquidHeightSlider.value) / 0.9) * 205;
+}
+function setupCanvasSpace() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.fillStyle = '#f0f0f0';
@@ -42,9 +65,9 @@ function drawCanvas() {
     
     ctx.fillStyle = 'rgb(35, 137, 218)';
     ctx.lineWidth = 2;
-    
-    const startPoint = {x: 20, y: 75};
-    
+}
+
+function drawTank() {
     ctx.beginPath();
     ctx.moveTo(startPoint.x, startPoint.y);
     ctx.lineTo(startPoint.x + 90, startPoint.y);
@@ -61,22 +84,16 @@ function drawCanvas() {
     ctx.closePath();
     ctx.stroke();
 
-    const containerHeight = 235;
-    const containerWidth = 135;
-
     ctx.beginPath();
     ctx.moveTo(startPoint.x + 63, startPoint.y + 6 + 8);
     ctx.lineTo(startPoint.x + 63, startPoint.y + containerHeight);
     ctx.closePath();
     ctx.stroke();
 
-    const currentPoint = {x: startPoint.x + 63, y: startPoint.y + containerHeight};
     ctx.beginPath();
     ctx.moveTo(currentPoint.x, currentPoint.y)
     ctx.quadraticCurveTo(currentPoint.x + 30, currentPoint.y + 11, currentPoint.x + 65, currentPoint.y + 14);
     
-    const diameter = (parseFloat(drainDiameterSlider.value) / 7) * 20;
-    const point1 = {x: currentPoint.x + 65, y: currentPoint.y + 14};
     ctx.lineTo(point1.x, point1.y + 28);
     ctx.lineTo(point1.x + 75, point1.y + 28);
     ctx.moveTo(point1.x + 75, point1.y + 28 - diameter);
@@ -86,7 +103,6 @@ function drawCanvas() {
     ctx.closePath();
     ctx.stroke();
 
-    const point2 = {x: point1.x + diameter, y: currentPoint.y + 14};
     ctx.beginPath();
     ctx.moveTo(point2.x, point2.y)
     ctx.quadraticCurveTo(point2.x + 30, point2.y - 3, startPoint.x + 63 + containerWidth, point2.y - 14);
@@ -94,8 +110,9 @@ function drawCanvas() {
     ctx.moveTo(point2.x, point2.y)
     ctx.closePath();
     ctx.stroke();
+}
 
-    
+function drawWaterFlowFromTap() {
     ctx.beginPath();
     ctx.lineTo(startPoint.x, startPoint.y);
     ctx.lineTo(startPoint.x + 90, startPoint.y);
@@ -106,6 +123,9 @@ function drawCanvas() {
     ctx.lineTo(startPoint.x, startPoint.y);
     ctx.closePath();
     ctx.fill();
+}
+
+function fillTank() {
 
     const centerX = (startPoint.x + 80 + startPoint.x + 90) / 2;
     const centerY = (startPoint.y + 20 + startPoint.y + 20) / 2;
@@ -138,7 +158,17 @@ function drawCanvas() {
     ctx.closePath();
     ctx.fill();
 
-    const tapDistance = 40;
+    ctx.beginPath();
+    ctx.lineTo(waterStartPoint.x + containerWidth, startPoint.y + 235);
+    ctx.lineTo(waterStartPoint.x + containerWidth, startPoint.y + 235 - waterHeight);
+    ctx.lineTo(waterStartPoint.x, startPoint.y + 235 - waterHeight);
+    ctx.lineTo(waterStartPoint.x, startPoint.y + 235);
+    ctx.closePath();
+    ctx.fill();
+}
+
+function drawTap() {
+    
     ctx.beginPath();
     ctx.moveTo(point1.x + tapDistance, point1.y + 28 - diameter);
     ctx.lineTo(point1.x + tapDistance, point1.y + 28);
@@ -155,7 +185,6 @@ function drawCanvas() {
     ctx.closePath();
     ctx.stroke();
 
-    const tapKnobHeight = 7.5
     ctx.beginPath();
     ctx.moveTo(point1.x + tapDistance + 10, point1.y + 28 - diameter);
     ctx.lineTo(point1.x + tapDistance + 10, point1.y + 28 - diameter - tapKnobHeight);
@@ -165,96 +194,39 @@ function drawCanvas() {
     ctx.lineTo(point1.x + tapDistance + 5, point1.y + 28 - diameter - tapKnobHeight);
     ctx.closePath();
     ctx.stroke();
+}
 
+function drawArrows() {
     ctx.font = '16px Arial';
     ctx.fillStyle = 'black'; // Set text color
-    drawText(point1.x + tapDistance + 10, point1.y + 28 + 15, 'c₀')
+    globalFunctions.drawText(point1.x + tapDistance + 10, point1.y + 28 + 15, 'c₀')
     ctx.fillStyle = 'rgb(35, 137, 218)';
 
-    const waterHeight = (parseFloat(liquidHeightSlider.value) / 0.9) * 205;
-    const waterStartPoint = {x: startPoint.x + 63, y: startPoint.y + 14 + 235};
-    ctx.beginPath();
-    ctx.lineTo(waterStartPoint.x + containerWidth, startPoint.y + 235);
-    ctx.lineTo(waterStartPoint.x + containerWidth, startPoint.y + 235 - waterHeight);
-    ctx.lineTo(waterStartPoint.x, startPoint.y + 235 - waterHeight);
-    ctx.lineTo(waterStartPoint.x, startPoint.y + 235);
-    ctx.closePath();
-    ctx.fill();
 
-    drawDashedLine(startPoint.x + 63 + 65, startPoint.y + 235 + 28 + 14, startPoint.x + 10, startPoint.y + 235 + 28 + 14);
-    drawDashedLine(startPoint.x + 63, startPoint.y + 235 - waterHeight, startPoint.x + 10, startPoint.y + 235 - waterHeight);
+    globalFunctions.drawDashedLine(startPoint.x + 63 + 65, startPoint.y + 235 + 28 + 14, startPoint.x + 10, startPoint.y + 235 + 28 + 14);
+    globalFunctions.drawDashedLine(startPoint.x + 63, startPoint.y + 235 - waterHeight, startPoint.x + 10, startPoint.y + 235 - waterHeight);
   
-    drawDoubleArrowLine(startPoint.x + 5, startPoint.y + 235 - waterHeight, startPoint.x + 5, startPoint.y + 235 + 28 + 14);
-    drawText(startPoint.x + 15, startPoint.y + 235 + 28 + 14 - waterHeight, 'h');
+    globalFunctions.drawDoubleArrowLine(startPoint.x + 5, startPoint.y + 235 - waterHeight, startPoint.x + 5, startPoint.y + 235 + 28 + 14);
+    globalFunctions.drawText(startPoint.x + 15, startPoint.y + 235 + 28 + 14 - waterHeight, 'h');
 
-    drawDashedLine(point1.x + 75, point1.y + 28, point1.x + 105, point1.y + 28)
-    drawDashedLine(point1.x + 75, point1.y + 28 - diameter, point1.x + 105, point1.y + 28 - diameter)
-    drawDoubleArrowLineOutward(point1.x + 105, point1.y + 28, point1.x + 105, point1.y + 28 - diameter, 'd');
+    globalFunctions.drawDashedLine(point1.x + 75, point1.y + 28, point1.x + 105, point1.y + 28)
+    globalFunctions.drawDashedLine(point1.x + 75, point1.y + 28 - diameter, point1.x + 105, point1.y + 28 - diameter)
+    globalFunctions.drawDoubleArrowLineOutward(point1.x + 105, point1.y + 28, point1.x + 105, point1.y + 28 - diameter, 'd');
+}
 
-
+function drawCanvas() {
+    setupCanvasSpace();
+    drawWaterFlowFromTap();
+    drawTank();
+    fillTank();
+    drawTap();
+    drawArrows();
+    setupValues();
+    updateGraph();
 }
 
 
-function drawDoubleArrowLine(startX, startY, endX, endY, arrowSize = 10) {
-    ctx.beginPath();
-    ctx.moveTo(startX, startY);
-    ctx.lineTo(endX, endY);
-    ctx.fillStyle = 'black'
-    ctx.stroke();
-
-    const angle = Math.atan2(endY - startY, endX - startX);
-
-    drawArrowhead(startX, startY, angle + Math.PI, arrowSize);
-
-    drawArrowhead(endX, endY, angle, arrowSize);
-}
-
-function drawArrowhead(x, y, angle, size) {
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x - size * Math.cos(angle - Math.PI / 6), y - size * Math.sin(angle - Math.PI / 6));
-    ctx.lineTo(x - size * Math.cos(angle + Math.PI / 6), y - size * Math.sin(angle + Math.PI / 6));
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawText(x, y, text) {
-    ctx.font = '16px Arial';
-    ctx.fillStyle = 'black';
-    ctx.fillText(text, x, y);
-}
-
-function drawDashedLine(startX, startY, endX, endY, dashPattern = [5, 5]) {
-    ctx.setLineDash(dashPattern);
-    ctx.beginPath();
-    ctx.moveTo(startX, startY);
-    ctx.lineTo(endX, endY);
-    ctx.stroke();
-
-    ctx.setLineDash([]);
-}
-
-
-function drawDoubleArrowLineOutward(x1, y1, x2, y2, label = '', arrowSize = 10) {
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x1, y1 + 20);
-    ctx.moveTo(x2, y2);
-    ctx.lineTo(x2, y2 - 20);
-    ctx.stroke();
-
-    drawArrowhead(x2, y2, Math.PI / 2, arrowSize);
-
-    drawArrowhead(x1, y1, -Math.PI / 2, arrowSize);
-
-    ctx.font = '16px Arial';
-    ctx.fillStyle = 'black';
-    ctx.textAlign = 'center';
-    const labelY = (y1 + y2) / 2; 
-    ctx.fillText(label, x1 + 20, labelY);
-}
-
-drawCanvas()
+// Code to draw graph
 const g = 9.81;
 const canvasWidth = canvas.width;
 const canvasHeight = canvas.height;
@@ -280,8 +252,8 @@ function updateGraph() {
 
     const currentQ = calculateFlowRate(h, d, c0);
     drawCurrentPoint(h, currentQ);
-    drawText(graphStartX + (canvasWidth - graphStartX)/2, (canvasHeight - graphWidth - 60)/2, 'volumetric flow rate = ' + calculateFlowRate(h, d, c0).toFixed(2) + ' L/s');
-    drawText(graphStartX + (canvasWidth - graphStartX)/2, (canvasHeight - graphWidth - 15)/2, 'mass flow rate = ' + (calculateFlowRate(h, d, c0) * density).toFixed(2) + ' kg/s');
+    globalFunctions.drawText(graphStartX + (canvasWidth - graphStartX)/2, (canvasHeight - graphWidth - 60)/2, 'volumetric flow rate = ' + calculateFlowRate(h, d, c0).toFixed(2) + ' L/s');
+    globalFunctions.drawText(graphStartX + (canvasWidth - graphStartX)/2, (canvasHeight - graphWidth - 15)/2, 'mass flow rate = ' + (calculateFlowRate(h, d, c0) * density).toFixed(2) + ' kg/s');
 }
 
 function calculateFlowRate(h, d, c0) {
@@ -365,5 +337,4 @@ function drawCurrentPoint(h, Q) {
     ctx.fill();
 }
 
-// Initialize graph
-updateGraph();
+drawCanvas();
