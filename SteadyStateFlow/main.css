@@ -27,37 +27,29 @@ body {
 }
 
 .slider-container {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    width: 100%;
-    max-width: 624px;
-    margin: 10px auto;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 2px;
+    width: 800px;
+    margin-bottom: 10px;
+    margin-top: 10px;
 }
 
 .slider-wrapper {
     display: flex;
-    align-items: center;
+    flex-direction: row;
     justify-content: center;
-    gap: 2px;
-    position: relative;
-}
-
-.slider-label {
-    font-size: 16px;
-    text-align: right;
-    width: 200px;
+    gap: 10px;
 }
 
 .slider {
     -webkit-appearance: none;
-    appearance: none;
-    width: 300px;
+    width: 150px;
     height: 5px;
     background: #d3d3d3;
     border-radius: 5px;
     outline: none;
-    margin: 0 10px;
+    margin-top: 10px;
 }
 
 .slider::-webkit-slider-thumb {
@@ -71,23 +63,28 @@ body {
 }
 
 .slider::-moz-range-thumb {
-    width: 15px;
-    height: 15px;
-    background: rgba(134,199,134,255);
+    width: 20px;
+    height: 20px;
+    background: #88e788;
     border-radius: 50%;
     cursor: pointer;
 }
 
 .slider-value {
-    font-size: 16px;
+    display: inline-block;
+    width: 50px;
     text-align: left;
-    width: 50px; /* Fixed width for alignment */
-    margin-left: 10px; /* Adds spacing from slider */
+    overflow: hidden;
+    white-space: nowrap;
 }
 
-
-
-
+.slider-label {
+    display: inline-block;
+    width: 185px;
+    text-align: right;
+    overflow: hidden;
+    white-space: nowrap;
+}
 
 canvas {
     border: 1px solid #000;
