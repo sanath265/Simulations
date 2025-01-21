@@ -7,80 +7,57 @@ body {
     align-items: center;
     height: 100vh;
     background-color: white;
-    overflow-x: auto;
-    overflow-y: auto;
     width: 100%;
     font-family: sans-serif;
     font-weight: 400;
     font-size: 16px;
     margin-top: 10px;
+    overflow: hidden;
 }
 
 .button-container {
     display: flex;
-    justify-content: center;
-    gap: 20px;
-    width: 80%;
-    max-width: 500px;
+    /* gap: 10px; */
     margin-top: 10px;
-    margin-bottom: 20px;
+    justify-content: flex-start;
 }
 
-
-.button {
-    background-color: rgba(45,109,253,255);
-    color: white;
-    border: none;
-    border-radius: 5px;
-    height: 35px;
-    min-width: 80px;
-    width: auto;
-    cursor: pointer;
-    text-align: center;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-family: sans-serif;
-    font-weight: 300;
-    font-size: 16px;
+.button-container .btn {
+    margin-right: 10px;
 }
-
-
 
 .slider-container {
-    display: table-column;
-    /* grid-template-columns: repeat(2, 1fr);
-    grid-gap: 20px; */
+    display: flex;
+    justify-content: flex-start; /* Keeps the content (including the slider) aligned to the left */
+    flex-direction: column;
+    gap: 2px;
     width: 100%;
     max-width: 624px;
     margin-bottom: 20px;
+    margin-right: 80px;
+    margin-top: 10px;
 }
 
 .slider-wrapper {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: center; /* Centers sliders horizontally in each row */
     align-items: center;
-}
-
-.slider-label-wrapper {
-    display: flex;
-    justify-content: space-between;
+    gap: 10px;
     width: 100%;
-    margin-bottom: 5px;
 }
 
 .slider-label {
     font-size: 16px;
-}
-
-.slider-value {
-    font-size: 1px;
-    color: #333;
+    flex-shrink: 0;
+    text-align: right; /* Align the text to the left */
+    width: 200px; /* Add a fixed width for the label */
 }
 
 .slider {
     -webkit-appearance: none;
-    width: 100%;
+    appearance: none;
+    width: 312px; /* Fixed width for the slider to ensure alignment */
     height: 5px;
     background: #d3d3d3;
     border-radius: 5px;
@@ -105,6 +82,9 @@ body {
     cursor: pointer;
 }
 
+
+
+
 canvas {
     border: 1px solid #000;
     width: 100%;
@@ -118,18 +98,18 @@ canvas {
     }
     .button-container {
         width: 100%;
-        flex-direction: column;  /* Stack buttons vertically */
+        flex-direction: column;
         align-items: center;
     }
     .button {
-        width: 80%;  /* Ensure buttons fit smaller screens */
+        width: 80%;
         margin: 10px 0;
     }
     .slider-container {
-        grid-template-columns: 1fr;  /* Stack sliders vertically */
+        grid-template-columns: 1fr;
         grid-gap: 15px;
     }
     .canvas {
-        width: 100%;  /* Ensure canvas scales properly */
+        width: 100%;
     }
 }

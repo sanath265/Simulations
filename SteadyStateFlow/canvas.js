@@ -5,12 +5,6 @@ const canvas = document.getElementById('centeredCanvas');
 const ctx = canvas.getContext('2d');
 const globalFunctions = new ReusableMethods(ctx);
 
-var scale = window.devicePixelRatio || 1;
-canvas.width = 624 * scale;
-canvas.height = 455 * scale;
-canvas.style.width = '624px';
-canvas.style.height = '455px';
-
 const liquidHeightSlider = document.getElementById('liquidHeight');
 const drainDiameterSlider = document.getElementById('drainDiameter');
 const liquidDensitySlider = document.getElementById('liquidDensity');
