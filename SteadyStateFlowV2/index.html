@@ -1,3 +1,4 @@
+<!-- main.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,45 +7,43 @@
     <title>Steady-State Flow from a Tank</title>
     <link rel="stylesheet" href="main.css">
     <link rel="stylesheet" href="../Overlay/overlay.css">
-    <script src="https://kit.fontawesome.com/9d19ad28f4.js"></script>
-    <!-- Bootstrap CSS -->
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
+    <h1>Steady-State Flow from a Tank</h1>
+
+    <!-- Buttons -->
     <div class="button-container">
-        <!-- Buttons to trigger the modals -->
-        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#directions">Directions</button>
-        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#details">Details</button>
-        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#about">About</button>
+        <button class="button" id="aboutButton">About</button>
+        <button class="button" id="detailsButton">Details</button>
+        <button class="button" id="relatedLinksButton">Related Links</button>
+        <button class="button" id="citationsButton">Citations</button>
     </div>
 
-
     <div class="slider-container">
-        <!-- Slider Inputs -->
         <div class="slider-wrapper">
             <div class="slider-label-wrapper">
-                <label class="slider-label" for="liquidHeight">Liquid height (m)</label>
+                <label class="slider-label" for="liquidHeight">Liquid Height (m)</label>
                 <span class="slider-value" id="liquidHeightValue">0.18</span>
             </div>
             <input class="slider" type="range" id="liquidHeight" min="0.18" max="0.90" step="0.02" value="0.18">
         </div>
         <div class="slider-wrapper">
             <div class="slider-label-wrapper">
-                <label class="slider-label" for="drainDiameter">Drain diameter (cm)</label>
+                <label class="slider-label" for="drainDiameter">Drain Diameter (cm)</label>
                 <span class="slider-value" id="drainDiameterValue">7.0</span>
             </div>
             <input class="slider" type="range" id="drainDiameter" min="2.0" max="7.0" step="0.1" value="7.0">
         </div>
         <div class="slider-wrapper">
             <div class="slider-label-wrapper">
-                <label class="slider-label" for="liquidDensity">Liquid density (kg/L)</label>
+                <label class="slider-label" for="liquidDensity">Liquid Density (kg/L)</label>
                 <span class="slider-value" id="liquidDensityValue">1.00</span>
             </div>
             <input class="slider" type="range" id="liquidDensity" min="0.8" max="1.50" step="0.02" value="1.00">
         </div>
         <div class="slider-wrapper">
             <div class="slider-label-wrapper">
-                <label class="slider-label" for="dischargeCoefficient">Discharge coefficient (c<sub>0</sub>)</label>
+                <label class="slider-label" for="dischargeCoefficient">Discharge Coefficient (c₀)</label>
                 <span class="slider-value" id="dischargeCoefficientValue">0.95</span>
             </div>
             <input class="slider" type="range" id="dischargeCoefficient" min="0.5" max="1.00" step="0.05" value="0.95">
@@ -52,22 +51,10 @@
     </div>
 
     <canvas id="centeredCanvas" width="624" height="455"></canvas>
-    <div id="overlayContainer"></div>
 
-    <script>
-        fetch('../Overlay/overlay.html')
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('overlayContainer').innerHTML = data;
-            });
-    </script>
-
+    <div id="overlayContainer"></div> 
+    
     <script type="module" src="canvas.js"></script>
     <script src="../Overlay/overlay.js"></script>
-
-    <!-- Bootstrap JS, Popper, and jQuery -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>

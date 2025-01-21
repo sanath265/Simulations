@@ -5,12 +5,6 @@ const canvas = document.getElementById('centeredCanvas');
 const ctx = canvas.getContext('2d');
 const globalFunctions = new ReusableMethods(ctx);
 
-var scale = window.devicePixelRatio || 1;
-canvas.width = 624 * scale;
-canvas.height = 455 * scale;
-canvas.style.width = '624px';
-canvas.style.height = '455px';
-
 const liquidHeightSlider = document.getElementById('liquidHeight');
 const drainDiameterSlider = document.getElementById('drainDiameter');
 const liquidDensitySlider = document.getElementById('liquidDensity');
@@ -21,9 +15,9 @@ const drainDiameterValue = document.getElementById('drainDiameterValue');
 const liquidDensityValue = document.getElementById('liquidDensityValue');
 const dischargeCoefficientValue = document.getElementById('dischargeCoefficientValue');
 
-const startPoint = {x: 20, y: 75};
 const containerHeight = 235;
 const containerWidth = 135;
+const startPoint = {x: (canvas.width - containerWidth) / 2 - 60, y: 75};
 var waterHeight = (parseFloat(liquidHeightSlider.value) / 0.9) * 205;
 var diameter = (parseFloat(drainDiameterSlider.value) / 7) * 20;
 const currentPoint = {x: startPoint.x + 63, y: startPoint.y + containerHeight};
@@ -64,7 +58,8 @@ function setupCanvasSpace() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.resetTransform()
     ctx.textAlign = 'center'
-    ctx.fillStyle = '#fafafa';
+    ctx.font = '16px Arial'
+    ctx.fillStyle = '#f0f0f0';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.lineWidth = 2
     ctx.fillStyle = 'rgb(35, 137, 218)';
@@ -200,8 +195,9 @@ function drawTap() {
 }
 
 function drawArrows() {
+    ctx.font = '16px Arial';
     ctx.fillStyle = 'black'; // Set text color
-    globalFunctions.drawTextWithSubscript(point1.x + tapDistance + 10, point1.y + 28 + 15, 'c', '0');
+    globalFunctions.drawText(point1.x + tapDistance + 10, point1.y + 28 + 15, 'c₀')
     ctx.fillStyle = 'rgb(35, 137, 218)';
 
     globalFunctions.drawDashedLine(startPoint.x + 63 + 65, startPoint.y + 235 + 28 + 14, startPoint.x + 10, startPoint.y + 235 + 28 + 14);
@@ -223,118 +219,6 @@ function drawCanvas() {
     fillTank();
     drawTap();
     drawArrows();
-    updateGraph();
-}
-
-
-// Code to draw graph
-const g = 9.81;
-const canvasWidth = canvas.width;
-const canvasHeight = canvas.height;
-const graphStartX = 350;
-const graphWidth = 254;
-const graphMargin = (canvasHeight - graphWidth) / 2
-
-function updateGraph() {
-    const hMax = parseFloat(liquidHeightSlider.max);
-    const h = parseFloat(liquidHeightSlider.value);
-    const d = parseFloat(drainDiameterSlider.value) / 100;
-    const c0 = parseFloat(dischargeCoefficientSlider.value);
-    const density = parseFloat(liquidDensitySlider.value);
-
-    drawAxes(hMax);
-
-    const points = [];
-    for (let i = 0; i <= 1; i += 0.01) {
-        const Q = calculateFlowRate(i, d, c0);
-        points.push({ x: i, y: Q });
-    }
-    drawGraph(points);
-
-    const currentQ = calculateFlowRate(h, d, c0);
-    drawCurrentPoint(h, currentQ);
-    globalFunctions.drawText(graphStartX + (canvasWidth - graphStartX)/2, (canvasHeight - graphWidth - 60)/2, 'volumetric flow rate = ' + calculateFlowRate(h, d, c0).toFixed(2) + ' L/s');
-    globalFunctions.drawText(graphStartX + (canvasWidth - graphStartX)/2, (canvasHeight - graphWidth - 15)/2, 'mass flow rate = ' + (calculateFlowRate(h, d, c0) * density).toFixed(2) + ' kg/s');
-}
-
-function calculateFlowRate(h, d, c0) {
-    return c0 * Math.PI * Math.pow(d, 2) / 4 * Math.sqrt(2 * g * h) * 1000; // Q = c₀π(d²/4)√(2gh)
-}
-
-function drawAxes(hMax) {
-    ctx.strokeStyle = 'black';
-
-    ctx.beginPath();
-    ctx.moveTo(graphStartX, canvasHeight - graphMargin);
-    ctx.lineTo(graphStartX + graphWidth, canvasHeight - graphMargin);
-    ctx.lineTo(graphStartX + graphWidth, canvasHeight - graphMargin - graphWidth);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(graphStartX, canvasHeight - graphMargin);
-    ctx.lineTo(graphStartX, canvasHeight - graphMargin - graphWidth);
-    ctx.lineTo(graphStartX + graphWidth, canvasHeight - graphMargin - graphWidth);
-    ctx.stroke();
-
-    // Labels and ticks
-    ctx.font = '16px Arial, sans-serif';
-    ctx.textAlign = 'center';
-
-    // X-axis labels and ticks
-    for (let i = 0; i <= 1; i += 0.2) {
-        const x = graphStartX + (i) * graphWidth;
-        ctx.beginPath();
-        ctx.moveTo(x, canvasHeight - graphMargin);
-        ctx.lineTo(x, canvasHeight - graphMargin + 5);
-        ctx.stroke();
-        ctx.fillText(i.toFixed(1), x, canvasHeight - graphMargin + 20);
-    }
-
-    // Y-axis labels and ticks
-    ctx.textAlign = 'right';
-    for (let i = 0; i <= 20; i += 5) {
-        const y = canvasHeight - graphMargin - (i / 20) * graphWidth;
-        ctx.beginPath();
-        ctx.moveTo(graphStartX, y);
-        ctx.lineTo(graphStartX - 5, y);
-        ctx.stroke();
-        ctx.fillText(i.toFixed(0), graphStartX - 10, y + 4);
-    }
-
-    // Axis titles
-    ctx.textAlign = 'center';
-    ctx.font = '16px Arial, sans-serif'
-    ctx.fillText("liquid height (m)", graphStartX + graphWidth / 2, canvasHeight - graphMargin + 40);
-    ctx.save();
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText("volumetric flow rate (L/s)", -canvasHeight / 2, graphStartX - 35);
-    ctx.restore();
-}
-
-// Draw graph
-function drawGraph(points) {
-    ctx.strokeStyle = 'purple';
-
-    ctx.beginPath();
-    points.forEach((point, index) => {
-        const x = graphStartX + (point.x) * graphWidth;
-        const y = canvasHeight - graphMargin - (point.y / 20) * graphWidth; // Scale Q for visibility
-        if (index === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-    ctx.strokeStyle = 'black';
-}
-
-// Draw current point
-function drawCurrentPoint(h, Q) {
-    const x = graphStartX + (h) * graphWidth;
-    const y = canvasHeight - graphMargin - (Q / 20) * graphWidth; // Scale Q for visibility
-
-    ctx.fillStyle = 'red';
-    ctx.beginPath();
-    ctx.arc(x, y, 5, 0, 2 * Math.PI);
-    ctx.fill();
 }
 
 drawCanvas();

@@ -35,9 +35,8 @@ class ReusableMethods {
 
     drawText(x, y, text) {
         const { ctx } = this;
-        ctx.font = 'normal 16px Arial';
-        ctx.fillStyle = 'black';
         ctx.textAlign = 'center';
+        ctx.fillStyle = 'black'
         ctx.fillText(text, x, y);
     }
 
@@ -66,12 +65,27 @@ class ReusableMethods {
 
         this.drawArrowhead(x1, y1, -Math.PI / 2, arrowSize);
 
-        ctx.font = '16px Arial';
-        ctx.fillStyle = 'black';
         ctx.textAlign = 'center';
         const labelY = (y1 + y2) / 2; 
         ctx.fillText(label, x1 + 20, labelY);
     }
+
+    drawTextWithSubscript(x, y, mainText, subText) {
+        const { ctx } = this;
+    
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+    
+        ctx.fillText(mainText, x, y);
+    
+        ctx.font = '10px Arial'; 
+
+        ctx.fillText(subText, x + ctx.measureText(mainText).width + 3, y + 5);
+    
+        ctx.font = '16px Arial';
+    }
+    
 }
 
 export default ReusableMethods;
