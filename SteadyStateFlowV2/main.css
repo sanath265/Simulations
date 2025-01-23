@@ -1,117 +1,73 @@
 /* main.css */
 
 body {
-    margin: 0;
-    font-family: Arial, sans-serif;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
     height: 100vh;
-    background-color: #f0f0f0;
-    overflow-x: auto;
-    overflow-y: auto;
+    background-color: white;
     width: 100%;
-}
-
-h1 {
-    align-self: flex-start;
-    color: maroon;
-    font-size: 24px;
-    font-weight: bold;
-    margin: 5vh 0 5vh 5%;
-    white-space: nowrap;
-}
-
-@media (max-width: 600px) {
-    h1 {
-        margin: 4vh 0 4vh 5%;
-    }
+    font-family: sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    margin-top: 10px;
+    overflow: hidden;
 }
 
 .button-container {
     display: flex;
-    justify-content: space-around;
-    width: 80%;
-    max-width: 624px;
-    margin-bottom: 20px;
+    /* gap: 10px; */
+    margin-top: 10px;
+    justify-content: flex-start;
 }
 
-.button {
-    background-color: rgb(35, 137, 218);
-    color: white;
-    border: none;
-    border-radius: 5px;
-    height: 35px;
-    width: 80%;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    text-align: center;
+.button-container .btn {
+    margin-right: 10px;
+}
+
+.control-container {
     display: flex;
+    flex-direction: row;
     justify-content: center;
     align-items: center;
-    margin: 0 10px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    gap: 10px;
 }
 
-.slider-container {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-gap: 20px;
-    width: 100%;
-    max-width: 624px;
-    margin-bottom: 20px;
+.dropdown-wrapper {
+    display: flex;
+    align-items: center;
+    width: 250px;
+    gap: 10px;
 }
 
-.slider-wrapper {
+.dropdownLabel {
+    width: auto;
+    flex-shrink: 0;
+}
+
+.canvas-container {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+.stopwatch {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    width: 150px;
 }
-
-.slider-label-wrapper {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    margin-bottom: 5px;
+.stopwatch button {
+    margin-top: 10px;
 }
-
-.slider-label {
-    font-size: 14px;
-    font-weight: bold;
-}
-
-.slider-value {
-    font-size: 14px;
-    font-weight: bold;
-    color: #333;
-}
-
-.slider {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 10px;
-    background: #d3d3d3;
-    border-radius: 5px;
-    outline: none;
-}
-
-.slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 20px;
-    height: 20px;
-    background: #88e788;
-    border-radius: 50%;
-    cursor: pointer;
-}
-
-.slider::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
-    background: #88e788;
-    border-radius: 50%;
-    cursor: pointer;
+.timer-display {
+    font-size: 24px;
+    margin-bottom: 10px;
+    text-align: center;
+    width: 150px;
 }
 
 canvas {
@@ -127,18 +83,18 @@ canvas {
     }
     .button-container {
         width: 100%;
-        flex-direction: column;  /* Stack buttons vertically */
+        flex-direction: column;
         align-items: center;
     }
     .button {
-        width: 80%;  /* Ensure buttons fit smaller screens */
+        width: 80%;
         margin: 10px 0;
     }
     .slider-container {
-        grid-template-columns: 1fr;  /* Stack sliders vertically */
+        grid-template-columns: 1fr;
         grid-gap: 15px;
     }
     .canvas {
-        width: 100%;  /* Ensure canvas scales properly */
+        width: 100%;
     }
 }
