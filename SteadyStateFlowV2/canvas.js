@@ -220,7 +220,6 @@ function drawCanvas() {
     fillTank();
     drawTap();
     drawArrows();
-    drawRuler();
 }
 
 drawCanvas();
@@ -267,56 +266,69 @@ function enableButton(button, enabled) {
     button.disabled = !enabled;
 }
 
+function updateButtonUI() {
+    isMeasuring = false;
+    if (isRunning) {
+        stopTimer();
+        startStopButton.textContent = 'Start Timer';
+        startStopButton.className = 'btn btn-success';
+        openValveButton.textContent = 'open valve';
+        openValveButton.classList.remove('btn-danger');
+        openValveButton.classList.add('btn-success');
+        if (!document.getElementById('openValveButtonIcon')) {
+            const icon = document.createElement('i');
+            icon.id = 'openValveButtonIcon';
+            icon.className = 'fas fa-play';
+            icon.setAttribute('aria-hidden', 'false');
+            openValveButton.prepend(icon);
+        } else {
+            openValveButtonIcon.classList.remove('fa-pause');
+            openValveButtonIcon.classList.add('fa-play');
+        }
+        enableButton(measureLengthButton, true);
+    } else {
+        startTimer();
+        startStopButton.textContent = 'Stop Timer';
+        startStopButton.className = 'btn btn-danger';
+        openValveButton.textContent = 'close valve';
+        openValveButton.classList.remove('btn-success');
+        openValveButton.classList.add('btn-danger');
+        if (!document.getElementById('openValveButtonIcon')) {
+            const icon = document.createElement('i');
+            icon.id = 'openValveButtonIcon';
+            icon.className = 'fas fa-pause';
+            icon.setAttribute('aria-hidden', 'false');
+            openValveButton.prepend(icon);
+        } else {
+            openValveButtonIcon.classList.remove('fa-play');
+            openValveButtonIcon.classList.add('fa-pause');
+        }
+        enableButton(measureLengthButton, false);
+    }
+    isRunning = !isRunning;
+}
+
 function buttonListeners() {
     
     openValveButton.addEventListener('click', () => {
         enableButton(startStopButton, true);
-        if (isRunning) {
-            stopTimer();
-            startStopButton.textContent = 'Start Timer';
-            startStopButton.className = 'btn btn-success';
-            openValveButton.textContent = 'open valve';
-            openValveButton.className = 'btn btn-success';
-            openValveButtonIcon.className = 'fas fa-play';
-            enableButton(measureLengthButton, true);
-        } else {
-            startTimer();
-            startStopButton.textContent = 'Stop Timer';
-            startStopButton.className = 'btn btn-danger';
-            openValveButton.textContent = 'close valve';
-            openValveButton.className = 'btn btn-danger';
-            openValveButtonIcon.className = 'fas fa-pause';
-            enableButton(measureLengthButton, false);
-        }
-        isRunning = !isRunning;
+        liquidHeightDropdown.disabled = true;
+        drainDiameterDropdown.disabled = true;
+        updateButtonUI();
     });
     
     startStopButton.addEventListener('click', () => {
-        if (isRunning) {
-            stopTimer();
-            startStopButton.textContent = 'Start Timer';
-            startStopButton.className = 'btn btn-success';
-            openValveButton.textContent = 'open valve';
-            openValveButton.className = 'btn btn-success';
-            openValveButtonIcon.className = 'fas fa-play';
-            enableButton(measureLengthButton, true);
-        } else {
-            startTimer();
-            startStopButton.textContent = 'Stop Timer';
-            startStopButton.className = 'btn btn-danger';
-            openValveButton.textContent = 'close valve';
-            openValveButton.className = 'btn btn-danger';
-            openValveButtonIcon.className = 'fas fa-pause';
-            enableButton(measureLengthButton, false);
-        }
-        isRunning = !isRunning;
+        isMeasuring = false;
+        updateButtonUI();0
     });
     
     measureLengthButton.addEventListener('click', () => {
         isMeasuring = !isMeasuring;
         if (isMeasuring) {
             drawRuler();
+            drawToastMessage(waterHeight);
         }
+        
     });
     
     const resetButton = document.getElementById('resetButton');
@@ -330,6 +342,7 @@ function reset() {
     elapsedTime = 0;
     updateTimerDisplay();
     isRunning = false;
+    isMeasuring = false;
     startStopButton.textContent = 'Start Timer';
     startStopButton.className = 'btn btn-success';
     openValveButton.textContent = 'open valve';
@@ -337,6 +350,8 @@ function reset() {
     openValveButtonIcon.className = 'fas fa-play';
     enableButton(measureLengthButton, true);
     waterHeight = (parseFloat(liquidHeightDropdown.value) / 80) * fixedWaterHeight;
+    liquidHeightDropdown.disabled = false;
+    drainDiameterDropdown.disabled = false;
     drawCanvas();
 }
 
@@ -356,7 +371,6 @@ function calculateHeightWithTime() {
 }
 
 function drawRuler() {
-    const maxRulerSize = 235;
     ctx.fillStyle = 'white';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -385,5 +399,86 @@ function drawRuler() {
     }
 }
 
+function drawToastMessage(liquidHeight) {
+    const toastMessage = "measured length = " + (liquidHeight * 80 / fixedWaterHeight).toFixed(2).toString() + " cm";
+    const toastWidth = ctx.measureText(toastMessage).width + 20; 
+    const toastHeight = 30;
+    ctx.fillStyle = '#666666';
+    ctx.beginPath();
+    ctx.moveTo(startPoint.x + 20,  startPoint.y + 14 + containerHeight - liquidHeight);
+    ctx.lineTo(startPoint.x + 20 - 6, startPoint.y + 14 + containerHeight - liquidHeight - 6);
+    ctx.lineTo(startPoint.x + 20 - 6, startPoint.y + 14 + containerHeight - liquidHeight - toastHeight / 2);
+    ctx.lineTo(startPoint.x + 20 - 6 - toastWidth, startPoint.y + 14 + containerHeight - liquidHeight - toastHeight / 2);
+    ctx.lineTo(startPoint.x + 20 - 6 - toastWidth, startPoint.y + 14 + containerHeight - liquidHeight + toastHeight / 2);
+    ctx.lineTo(startPoint.x + 20 - 6, startPoint.y + 14 + containerHeight - liquidHeight + toastHeight / 2);
+    ctx.lineTo(startPoint.x + 20 - 6, startPoint.y + 14 + containerHeight - liquidHeight + 6);
+    ctx.lineTo(startPoint.x + 20,  startPoint.y + 14 + containerHeight - liquidHeight);
+    ctx.stroke();
+    ctx.fill();
+    ctx.fillStyle = 'white';
+    ctx.fillText(toastMessage, startPoint.x + 20 - 6 - toastWidth / 2, startPoint.y + 14 + containerHeight - liquidHeight);
+}
+
 buttonListeners();
 updateTimerDisplay();
+
+// const droplets = [];
+
+// // Function to draw the tap
+// function drawTap1() {
+//     ctx.fillStyle = "gray";
+//     ctx.fillRect(150, 50, 100, 30); // Tap body
+//     ctx.fillRect(190, 30, 20, 20); // Tap neck
+//     ctx.fillRect(165, 80, 70, 10); // Tap spout
+// }
+
+// // Function to create water droplets
+// function createDroplet() {
+//     const droplet = {
+//         x: 200 + Math.random() * 10 - 5, // Random slight spread
+//         y: 90,
+//         radius: 5,
+//         speed: 2 + Math.random() * 2 // Random speed for natural look
+//     };
+//     droplets.push(droplet);
+// }
+
+// // Function to draw water droplets
+// function drawDroplets() {
+//     ctx.fillStyle = "blue";
+//     droplets.forEach((droplet) => {
+    //         ctx.beginPath();
+//         ctx.arc(droplet.x, droplet.y, droplet.radius, 0, Math.PI * 2);
+//         ctx.fill();
+//     });
+// }
+
+// // Function to update droplet positions
+// function updateDroplets() {
+//     droplets.forEach((droplet, index) => {
+    //         droplet.y += droplet.speed;
+//         // Remove droplets that go off canvas
+//         if (droplet.y > canvas.height) {
+//             droplets.splice(index, 1);
+//         }
+//     });
+// }
+
+// // Animation loop
+// function animate() {
+//     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+//     drawCanvas();
+//     drawTap1();
+//     drawDroplets();
+//     updateDroplets();
+
+//     // Create new droplets periodically
+//     if (Math.random() < 0.2) {
+//         createDroplet();
+//     }
+
+//     requestAnimationFrame(animate);
+// }
+
+// animate();

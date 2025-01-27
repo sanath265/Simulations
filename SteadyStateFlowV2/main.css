@@ -70,6 +70,10 @@ body {
     width: 150px;
 }
 
+.pencil-cursor {
+    cursor: crosshair;
+}
+
 canvas {
     border: 1px solid #000;
     width: 100%;
