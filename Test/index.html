@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/@svgdotjs/svg.js@3.0/dist/svg.min.js"></script>
+    <style>
+        #canvas { width: 800px; height: 600px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <div id="canvas"></div>
+
+    <script>
+        const canvas = SVG().addTo('#canvas').size(800, 600);
+        
+        // Real-world parameters
+        const pipeDiameter = 3.5; // cm
+        const pipeHeight = 2.0;   // meters (h)
+        const gravity = 9.8;      // m/s²
+        
+        // Conversion factors
+        const pixelsPerMeter = 200;  // 1m = 200 pixels
+        const pixelsPerCm = pixelsPerMeter / 100;
+        
+        // Pipe dimensions in pixels
+        const pipeWidth = pipeDiameter * pixelsPerCm;
+        const pipeY = 600 - (pipeHeight * pixelsPerMeter);
+
+        // Draw the pipe (horizontal)
+        const pipe = canvas.rect(pipeWidth, 10)
+                          .move(50, pipeY - 5)
+                          .fill('#555');
+
+        // Create multiple droplets
+        const droplets = [];
+        const dropletCount = 3000;
+        const initialVelocity = 2.5; // m/s
+        
+        // Physics constants
+        const timeStep = 0.0016; // ~60 FPS (16ms per frame)
+        const gPixels = gravity * pixelsPerMeter; // Convert gravity to pixels/s²
+
+        // Create droplet objects
+        for (let i = 0; i < dropletCount; i++) {
+            droplets.push({
+                element: canvas.circle(pipeDiameter * pixelsPerCm * 0.3)
+                              .fill('#39f')
+                              .move(50 + pipeWidth/2, pipeY),
+                vx: initialVelocity * pixelsPerMeter * (0.9 + Math.random() * 0.2),
+                vy: 0,
+                x: 50 + pipeWidth/2,
+                y: pipeY,
+                active: false,
+                delay: Math.random() * 2 // Staggered start
+            });
+        }
+
+        // Animation loop
+        let lastTime = 0;
+        function animate(timestamp) {
+            const deltaTime = (timestamp - lastTime) / 1000; // Convert to seconds
+            lastTime = timestamp;
+
+            droplets.forEach(droplet => {
+                if (droplet.delay > 0) {
+                    droplet.delay -= deltaTime;
+                    return;
+                }
+                
+                if (!droplet.active) {
+                    droplet.active = true;
+                    droplet.startTime = timestamp;
+                }
+
+                // Update physics
+                droplet.vy += gPixels * deltaTime;
+                droplet.x += droplet.vx * deltaTime;
+                droplet.y += droplet.vy * deltaTime;
+
+                // Update position
+                droplet.element.center(droplet.x, droplet.y);
+
+                // Reset when droplet leaves view
+                if (droplet.x > 800 || droplet.y > 600) {
+                    droplet.x = 50 + pipeWidth/2;
+                    droplet.y = pipeY;
+                    droplet.vy = 0;
+                    droplet.vx = initialVelocity * pixelsPerMeter * (0.9 + Math.random() * 0.2);
+                    droplet.delay = Math.random() * 0.5;
+                }
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        // Start animation
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>
