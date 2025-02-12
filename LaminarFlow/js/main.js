@@ -24,6 +24,7 @@ let shaft = null;
 let currentAngle = 0;
 let shaftFrontView = null;
 let knobFrontView = null;
+let connectingRod = null;
 
 function drawCanvas() {
     drawFrontView();
@@ -54,7 +55,7 @@ function drawContainer() {
     .fill('none')
     .stroke({ color: '#000', width: surfaceWidth / 2 });
     
-    draw.rect(connectingRodWidth, connectingRodHeight)
+    connectingRod = draw.rect(connectingRodWidth, connectingRodHeight)
     .center( 3 * canvasWidth / 4, canvasHeight/2 - containerHeight / 2 + innerMargin / 2 - connectingRodHeight / 2)
     .fill('#eeeeee')
     .stroke({ color: borderHexCode, width: 1 });
@@ -156,6 +157,7 @@ function updateFrontView(angle) {
     const fixedShaftX = 3 * canvasWidth / 4 - connectingRodWidth / 2;
     const fixedKnobX = 3 * canvasWidth / 4 - connectingRodWidth / 2 + shaftLength - knobWidth - 10
     
+    const angleDeg = angle;
     if ((angle >= 0 && angle <= 90) || (angle < 0 && angle >= -90)) {
         angle = Math.abs(angle);
         newShaftLength = connectingRodWidth + (shaftLength - connectingRodWidth) * (1 - angle / 90); // Decreasing size
@@ -167,14 +169,39 @@ function updateFrontView(angle) {
         newShaftMargin = fixedShaftX - newShaftLength + connectingRodWidth;
         newKnobMargin = fixedKnobX - shaftLength + knobWidth + 7.5 - (shaftLength - knobWidth - 7.5) * ((angle - 90) / 90);
     }
-    
-    console.log(newShaftLength, newShaftMargin, angle);
-    
-    shaftFrontView.size(newShaftLength, 20)
-    .move(newShaftMargin, 
-        canvasHeight / 2 - containerHeight / 2 + innerMargin / 2 - connectingRodHeight + 4);
-        
-    knobFrontView.size(knobWidth, knobHeight)
-    .move(newKnobMargin, 
-        canvasHeight / 2 - containerHeight / 2 + innerMargin / 2 - connectingRodHeight + 4 - 40);
+
+    console.log(angleDeg);
+    if (angleDeg >= 0) {
+        redrawConnectingRod();
+        redrawShaft(newShaftLength, newShaftMargin);
+        redrawKnob(newKnobMargin)
+    } else {
+        redrawKnob(newKnobMargin);
+        redrawConnectingRod();
+        redrawShaft(newShaftLength, newShaftMargin);
+    }
+}
+
+function redrawConnectingRod() {
+    connectingRod.remove(); // Remove old element
+    connectingRod = draw.rect(connectingRodWidth, connectingRodHeight) // Recreate element
+        .center(3 * canvasWidth / 4, canvasHeight / 2 - containerHeight / 2 + innerMargin / 2 - connectingRodHeight / 2)
+        .fill('#eeeeee')
+        .stroke({ color: borderHexCode, width: 1 });
+}
+
+function redrawShaft(newShaftLength, newShaftMargin) {
+    shaftFrontView.remove(); // Remove old element
+    shaftFrontView = draw.rect(newShaftLength, 20) // Recreate element
+        .move(newShaftMargin, canvasHeight / 2 - containerHeight / 2 + innerMargin / 2 - connectingRodHeight + 4)
+        .fill('#000')
+        .stroke({ color: 'black', width: 1 });;
+}
+
+function redrawKnob(newKnobMargin) {
+    knobFrontView.remove(); // Remove old element
+    knobFrontView = draw.rect(knobWidth, knobHeight) // Recreate element
+        .move(newKnobMargin, canvasHeight / 2 - containerHeight / 2 + innerMargin / 2 - connectingRodHeight + 4 - 40)
+        .fill('#989788')
+        .stroke({ color: 'black', width: 1 });
 }
