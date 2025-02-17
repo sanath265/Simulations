@@ -5,11 +5,12 @@ const borderHexCode = '#b3b3b3';
 const containerHeight = 450;
 const containerWidth = 8 * containerHeight / 12;
 const surfaceWidth = 8;
-const innerMargin = 50;
+const innerMargin = 50; 
 const shaftLength = 200;
 const shaftWidth = 20;
-const connectingRodWidth = 25;
-const connectingRodHeight = 60;
+const connectingRodWidth = containerWidth / 10;
+const connectingRodExtraHeight = 25
+const connectingRodHeight = containerHeight + connectingRodExtraHeight;
 const knobWidth = 30;
 const knobHeight = 40;
 let isDragging = false;
@@ -25,51 +26,100 @@ let currentAngle = 0;
 let shaftFrontView = null;
 let knobFrontView = null;
 let connectingRod = null;
+const shaftColor = '#C0C0C0'
+const knobColor = 'black'
+const connectingRodColor = 'black'
+let redPoint = null;
+let greenPoint = null;
+let bluePoint = null;
 
+let redPointTopView = null;
+let greenPointTopView = null;
+let bluePointTopView = null;
+
+let prevAngle = 0;
+let totalRotation = 0;
+let dots = null;
+let frontDots = null;
+let isMeasuringAngle = false;
+let protractor = null;
+
+const resetButton = document.getElementById('reset-button');
+const measureAngleButton = document.getElementById('measure-angle-button');
+
+function resetCanvas() {
+    resetButton.addEventListener('click', () => {
+        redPoint = null;
+        greenPoint = null;
+        bluePoint = null;
+        
+        redPointTopView = null;
+        greenPointTopView = null;
+        bluePointTopView = null;
+        
+        prevAngle = 0;
+        totalRotation = 0;
+        knob = null;
+        shaft = null;
+        currentAngle = 0;
+        shaftFrontView = null;
+        knobFrontView = null;
+        connectingRod = null;
+        isDragging = false;
+        let isMeasuringAngle = false;
+        draw.clear();
+        drawCanvas();
+    });
+    
+    measureAngleButton.addEventListener('click', () => {
+        isMeasuringAngle = !isMeasuringAngle;
+        if (isMeasuringAngle) {
+            protractor = drawProtractor(canvasWidth / 4, canvasHeight / 2, 200);
+        } else if (protractor) {
+            protractor.remove();
+        }
+    });
+}
 function drawCanvas() {
     drawFrontView();
     drawTopView();
+    drawPoints();
 }
 
 function drawFrontView() {
+    drawBottomSupport();
     drawContainer();
     drawShaft();
-    drawBottomSupport();
-    createConnectingRod();
 }
 
 function drawTopView() {
     drawContainerTopView();
     createShaft();
     createKnob();
+    createConnectingRod();
     setupDragHandlers();
 }
 function drawContainer() {
     draw.rect(containerWidth, containerHeight)
     .center( 3 * canvasWidth / 4, canvasHeight/2 )
     .fill('none')
-    .stroke({ color: "#eeeeee", width: surfaceWidth});
-    
-    draw.rect(containerWidth - innerMargin, containerHeight - innerMargin)
-    .center( 3 * canvasWidth / 4, canvasHeight/2 )
-    .fill('none')
-    .stroke({ color: '#000', width: surfaceWidth / 2 });
+    .stroke({ color: borderHexCode, width: surfaceWidth});
     
     connectingRod = draw.rect(connectingRodWidth, connectingRodHeight)
-    .center( 3 * canvasWidth / 4, canvasHeight/2 - containerHeight / 2 + innerMargin / 2 - connectingRodHeight / 2)
-    .fill('#eeeeee')
-    .stroke({ color: borderHexCode, width: 1 });
+    .center(  3 * canvasWidth / 4, canvasHeight/2 - connectingRodExtraHeight)
+    .fill('black')
+    .stroke({ color: 'black', width: 1 });
 }
 
 function drawShaft() {
     shaftFrontView = draw.rect(shaftLength, 20)
-    .move( 3 * canvasWidth / 4 - connectingRodWidth / 2, canvasHeight/2 - containerHeight / 2 + innerMargin / 2 - connectingRodHeight + 4)
-    .fill('#000')
+    .move( 3 * canvasWidth / 4 - connectingRodWidth / 2, canvasHeight/2 - containerHeight / 2 - connectingRodExtraHeight)
+    .fill(shaftColor)
     .stroke({ color: 'black', width: 1 });
     
     knobFrontView = draw.rect(knobWidth, knobHeight)
-    .move( 3 * canvasWidth / 4 - connectingRodWidth / 2 + shaftLength - knobWidth - 10, canvasHeight/2 - containerHeight / 2 + innerMargin / 2 - connectingRodHeight + 4 - 40)
-    .fill('#989788')
+    .move( 3 * canvasWidth / 4 - connectingRodWidth / 2 + shaftLength - knobWidth - 10, canvasHeight/2 - containerHeight / 2 - connectingRodExtraHeight - 40)
+    .fill(knobColor)
     .stroke({ color: 'black', width: 1 });
 }
 
@@ -77,44 +127,40 @@ function drawContainerTopView() {
     draw.circle(containerWidth)
     .center( 1 * canvasWidth / 4, canvasHeight/2 )
     .fill('none')
-    .stroke({ color: "#eeeeee", width: surfaceWidth});
-    
-    draw.circle(containerWidth - innerMargin)
-    .center( 1 * canvasWidth / 4, canvasHeight/2 )
-    .fill('none')
-    .stroke({ color: '#000', width: surfaceWidth / 2 });
+    .stroke({ color: borderHexCode, width: surfaceWidth});
 }
 
 function drawBottomSupport() {
-    draw.rect(10, 10)
-    .center(3 * canvasWidth / 4, canvasHeight/2 + containerHeight / 2 - 10)
-    
     draw.circle((innerMargin - 10)/3)
-    .center(3 * canvasWidth / 4, canvasHeight/2 + containerHeight / 2 - 14 + 10 - (innerMargin - 10)/3)
-    .fill('#eeeeee');
+    .center(3 * canvasWidth / 4, canvasHeight/2 + containerHeight / 2 - 10)
+    .fill('silver');
 }
-
-drawCanvas();
 
 function createShaft() {
     shaft = draw.rect(height, width)
     .move(centerX - 10, centerY - width/2)
     .radius(cornerRadius)
-    .fill('black');
+    .fill(shaftColor)
+    .stroke({ color: 'black', width: 1 });
 }
 
 function createKnob() {
     knob = draw.circle(knobWidth)
     .center(canvasWidth / 4 + shaftLength - knobWidth - 5, canvasHeight/2)
-    .fill(borderHexCode)
+    .fill(knobColor)
     .stroke({ color: 'black', width: 1 });
 }
 
 function createConnectingRod() {
-    draw.circle(width)
+    draw.circle(connectingRodWidth)
     .center(canvasWidth / 4, canvasHeight/2)
-    .fill('#eeeeee')
-    .stroke({ color: borderHexCode, width: 1 });
+    .fill(connectingRodColor)
+    .stroke({ color: connectingRodColor, width: 1 });
+    
+    draw.circle(5)
+    .center(canvasWidth / 4, canvasHeight/2)
+    .fill("silver")
+    .stroke({ color: "silver", width: 1 });
 }
 
 function setupDragHandlers() {
@@ -169,39 +215,272 @@ function updateFrontView(angle) {
         newShaftMargin = fixedShaftX - newShaftLength + connectingRodWidth;
         newKnobMargin = fixedKnobX - shaftLength + knobWidth + 7.5 - (shaftLength - knobWidth - 7.5) * ((angle - 90) / 90);
     }
-
-    console.log(angleDeg);
+    
     if (angleDeg >= 0) {
-        redrawConnectingRod();
+        // redrawConnectingRod();
         redrawShaft(newShaftLength, newShaftMargin);
         redrawKnob(newKnobMargin)
     } else {
         redrawKnob(newKnobMargin);
-        redrawConnectingRod();
+        // redrawConnectingRod();
         redrawShaft(newShaftLength, newShaftMargin);
     }
+    updatePointsWithShaftRotation(angleDeg);
+    updatePointsFrontView(angleDeg);
 }
 
 function redrawConnectingRod() {
     connectingRod.remove(); // Remove old element
-    connectingRod = draw.rect(connectingRodWidth, connectingRodHeight) // Recreate element
-        .center(3 * canvasWidth / 4, canvasHeight / 2 - containerHeight / 2 + innerMargin / 2 - connectingRodHeight / 2)
-        .fill('#eeeeee')
-        .stroke({ color: borderHexCode, width: 1 });
+    connectingRod = draw.rect(connectingRodWidth, connectingRodHeight)
+    .center(  3 * canvasWidth / 4, canvasHeight/2 - connectingRodExtraHeight)
+    .fill('black')
+    .stroke({ color: 'black', width: 1 });
 }
 
 function redrawShaft(newShaftLength, newShaftMargin) {
     shaftFrontView.remove(); // Remove old element
     shaftFrontView = draw.rect(newShaftLength, 20) // Recreate element
-        .move(newShaftMargin, canvasHeight / 2 - containerHeight / 2 + innerMargin / 2 - connectingRodHeight + 4)
-        .fill('#000')
-        .stroke({ color: 'black', width: 1 });;
+    .move(newShaftMargin, canvasHeight / 2 - containerHeight / 2 - connectingRodExtraHeight)
+    .fill(shaftColor)
+    .stroke({ color: 'black', width: 1 });;
 }
 
 function redrawKnob(newKnobMargin) {
     knobFrontView.remove(); // Remove old element
     knobFrontView = draw.rect(knobWidth, knobHeight) // Recreate element
-        .move(newKnobMargin, canvasHeight / 2 - containerHeight / 2 + innerMargin / 2 - connectingRodHeight + 4 - 40)
-        .fill('#989788')
-        .stroke({ color: 'black', width: 1 });
+    .move(newKnobMargin, canvasHeight / 2 - containerHeight / 2 - connectingRodExtraHeight - 40)
+    .fill(knobColor)
+    .stroke({ color: 'black', width: 1 });
 }
+
+function drawPoints() {
+    const radius = 5;
+    redPoint = draw.circle(radius)
+    .center(3 * canvasWidth / 4 + (10 / 40) * (containerWidth / 2), canvasHeight/2 - containerHeight / 2 + 0.25 * containerHeight)
+    .fill('red')
+    .stroke({ color: 'red', width: 1 });
+    
+    greenPoint = draw.circle(radius)
+    .center(3 * canvasWidth / 4 + (20 / 40) * (containerWidth / 2), canvasHeight/2 - containerHeight / 2 + 0.5 * containerHeight)
+    .fill('green')
+    .stroke({ color: 'green', width: 1 });
+    
+    bluePoint = draw.circle(radius)
+    .center(3 * canvasWidth / 4 + (35 / 40) * (containerWidth / 2), canvasHeight/2 - containerHeight / 2 + 0.75 * containerHeight)
+    .fill('blue')
+    .stroke({ color: 'blue', width: 1 });
+    
+    redPointTopView = draw.circle(radius)
+    .center(canvasWidth / 4 + (10 / 40) * (containerWidth / 2), canvasHeight/2)
+    .fill('red')
+    .stroke({ color: 'red', width: 1 });
+    
+    greenPointTopView = draw.circle(radius)
+    .center(canvasWidth / 4 + (20 / 40) * (containerWidth / 2), canvasHeight/2)
+    .fill('green')
+    .stroke({ color: 'green', width: 1 });
+    
+    bluePointTopView = draw.circle(radius)
+    .center(canvasWidth / 4 + (35 / 40) * (containerWidth / 2), canvasHeight/2)
+    .fill('blue')
+    .stroke({ color: 'blue', width: 1 });
+    
+    dots = {
+        red: {
+            radiusFactor: 10 / 40,
+            rotationFactor: 4 / 10,
+            initialAngle: null,
+            effectiveAngle: null,
+            path: null,
+            view: redPointTopView
+        },
+        green: {
+            radiusFactor: 20 / 40,
+            rotationFactor: 4 / 20,
+            initialAngle: null,
+            effectiveAngle: null,
+            path: null,
+            view: greenPointTopView
+        },
+        blue: {
+            radiusFactor: 35 / 40,
+            rotationFactor: 4 / 35,
+            initialAngle: null,
+            effectiveAngle: null,
+            path: null,
+            view: bluePointTopView
+        }
+    };
+    
+    frontDots = {
+        red: {
+            centerX: 3 * canvasWidth / 4,
+            centerY: canvasHeight / 2 - containerHeight / 2 + 0.25 * containerHeight,
+            amplitude: (10 / 40) * (containerWidth / 2),
+            rotationFactor: 4 / 10,
+            initialAngle: null,
+            effectiveAngle: null,
+            path: null,
+            view: redPoint
+        },
+        green: {
+            centerX: 3 * canvasWidth / 4,
+            centerY: canvasHeight / 2 - containerHeight / 2 + 0.5 * containerHeight,
+            amplitude: (20 / 40) * (containerWidth / 2),
+            rotationFactor: 4 / 20,
+            initialAngle: null,
+            effectiveAngle: null,
+            path: null,
+            view: greenPoint
+        },
+        blue: {
+            centerX: 3 * canvasWidth / 4,
+            centerY: canvasHeight / 2 - containerHeight / 2 + 0.75 * containerHeight,
+            amplitude: (35 / 40) * (containerWidth / 2),
+            rotationFactor: 4 / 35,
+            initialAngle: null,
+            effectiveAngle: null,
+            path: null,
+            view: bluePoint
+        }
+    };
+}
+
+
+
+function generateArcPath(cx, cy, radius, startAngle, endAngle) {
+    let d = "";
+    const angleDiff = endAngle - startAngle;
+    const steps = Math.max(Math.ceil(Math.abs(angleDiff) / 0.05), 1);
+    const angleStep = angleDiff / steps;
+    for (let i = 0; i <= steps; i++) {
+        const angle = startAngle + i * angleStep;
+        const x = cx + radius * Math.cos(angle);
+        const y = cy + radius * Math.sin(angle);
+        d += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
+    }
+    return d;
+}
+
+function updatePointsWithShaftRotation(newAngle) {
+    if (prevAngle === null) {
+        prevAngle = newAngle;
+    }
+    let delta = newAngle - prevAngle;
+    if (delta > 180) {
+        delta -= 360;
+    } else if (delta < -180) {
+        delta += 360;
+    }
+    totalRotation += delta;
+    prevAngle = newAngle;
+    
+    const radians = totalRotation * (Math.PI / 180);
+    const centerX = canvasWidth / 4;
+    const centerY = canvasHeight / 2;
+    
+    for (let color in dots) {
+        const dot = dots[color];
+        const dotAngle = dot.rotationFactor * radians;
+        const radius = dot.radiusFactor * (containerWidth / 2);
+        if (dot.initialAngle === null) {
+            dot.initialAngle = dotAngle;
+            dot.effectiveAngle = dotAngle;
+        } else {
+            dot.effectiveAngle = dotAngle;
+        }
+        
+        const d = generateArcPath(centerX, centerY, radius, dot.initialAngle, dot.effectiveAngle);
+        if (dot.path === null) {
+            dot.path = draw.path(d).fill("none").stroke({ color: color, width: 2 });
+        } else {
+            dot.path.plot(d);
+        }
+        
+        const dotX = centerX + radius * Math.cos(dot.effectiveAngle);
+        const dotY = centerY + radius * Math.sin(dot.effectiveAngle);
+        console.log(dot.view, dot);
+        dot.view.center(dotX, dotY);
+    }
+}
+
+function updatePointsFrontView(newAngle) {
+    if (prevAngle === null) { prevAngle = newAngle };
+    let delta = newAngle - prevAngle;
+    if (delta > 180) { delta -= 360 }
+    else if (delta < -180) { delta += 360 };
+    totalRotation += delta;
+    prevAngle = newAngle;
+    
+    for (let color in frontDots) {
+        const dot = frontDots[color];
+        const currentAngle = dot.rotationFactor * totalRotation * (Math.PI / 180);
+        if (dot.initialAngle === null) {
+            dot.initialAngle = currentAngle;
+        }
+        dot.effectiveAngle = currentAngle;
+        const centerX = dot.centerX;
+        const y = dot.centerY;
+        const steps = Math.max(Math.ceil(Math.abs(dot.effectiveAngle - dot.initialAngle) / 0.05), 1);
+        const angleStep = (dot.effectiveAngle - dot.initialAngle) / steps;
+        let d = "";
+        for (let i = 0; i <= steps; i++) {
+            const angle = dot.initialAngle + i * angleStep;
+            const x = centerX + dot.amplitude * Math.cos(angle);
+            d += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
+        }
+        if (dot.path === null) {
+            dot.path = draw.path(d).fill("none").stroke({ color: color, width: 2 });
+        } else {
+            dot.path.plot(d);
+        }
+        const newX = centerX + dot.amplitude * Math.cos(dot.effectiveAngle);
+        dot.view.center(newX, y);
+    }
+}
+
+function drawProtractor(centerX, centerY, radius) {
+    // Create a group to hold all the protractor elements.
+    const oneview = draw.group();
+    
+    // Draw the outer circle.
+    oneview.circle(radius * 2)
+    .center(centerX, centerY)
+    .fill('none')
+    .stroke({ width: 2, color: 'black' });
+    
+    // Draw the tick marks and angle labels.
+    for (let angle = 0; angle < 360; angle++) {
+        const radian = angle * (Math.PI / 180);
+        const innerRadius = radius - (angle % 10 === 0 ? radius - 25 : (angle % 5 === 0 ? radius / 2 : radius / 8));
+        
+        const x1 = centerX + radius * Math.cos(radian);
+        const y1 = centerY + radius * Math.sin(radian);
+        const x2 = centerX + innerRadius * Math.cos(radian);
+        const y2 = centerY + innerRadius * Math.sin(radian);
+        
+        oneview.line(x1, y1, x2, y2)
+        .stroke({ width: 1, color: 'black' });
+        
+        if (angle % 10 === 0) {
+            const textRadius = radius;
+            const textX = centerX + textRadius * Math.cos(radian);
+            const textY = centerY + textRadius * Math.sin(radian);
+            
+            oneview.text(angle.toString())
+            .font({ size: 12, anchor: 'middle', fill: 'black' })
+            .attr({
+                'text-anchor': 'middle',
+                'dominant-baseline': 'middle',
+                // Translate to (textX, textY) then rotate about that point.
+                transform: `translate(${textX}, ${textY}) rotate(${angle - 90})`
+            });
+        }
+    }
+    
+    // Return the group so it can be used/manipulated later.
+    return oneview;
+}
+
+drawCanvas();
+resetCanvas();
