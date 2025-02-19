@@ -67,7 +67,7 @@ function resetCanvas() {
         knobFrontView = null;
         connectingRod = null;
         isDragging = false;
-        let isMeasuringAngle = false;
+        isMeasuringAngle = false;
         draw.clear();
         drawCanvas();
     });
