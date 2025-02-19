@@ -22,6 +22,7 @@ const height = shaftLength;
 const cornerRadius = shaftWidth / 2;
 let knob = null;
 let shaft = null;
+let shaftLine = null;
 let currentAngle = 0;
 let shaftFrontView = null;
 let knobFrontView = null;
@@ -75,8 +76,10 @@ function resetCanvas() {
         isMeasuringAngle = !isMeasuringAngle;
         if (isMeasuringAngle) {
             protractor = drawProtractor(canvasWidth / 4, canvasHeight / 2, 200);
+            shaftLine.show();
         } else if (protractor) {
             protractor.remove();
+            shaftLine.hide();
         }
     });
 }
@@ -142,6 +145,11 @@ function createShaft() {
     .radius(cornerRadius)
     .fill(shaftColor)
     .stroke({ color: 'black', width: 1 });
+    
+    shaftLine = draw.line(centerX, centerY, centerX + height - 10, centerY)
+    .stroke({ color: 'brown', width: 1 });
+    shaftLine.hide();
+    
 }
 
 function createKnob() {
@@ -167,6 +175,9 @@ function setupDragHandlers() {
     knob.on('mousedown', () => {
         isDragging = true;
     });
+    shaft.on('mousedown', () => {
+        isDragging = true;
+    });
     
     document.addEventListener('mousemove', (event) => {
         if (!isDragging) { return };
@@ -187,6 +198,7 @@ function setupDragHandlers() {
         );
         
         shaft.rotate(angleDeg - currentAngle, centerX, centerY);
+        shaftLine.rotate(angleDeg - currentAngle, centerX, centerY);
         currentAngle = angleDeg;
         updateFrontView(angleDeg);
     });
