@@ -2,7 +2,7 @@ const canvasWidth = 1000;
 const canvasHeight = 600;
 const draw = SVG().addTo('#svg-container').size(canvasWidth, canvasHeight);
 const borderHexCode = '#b3b3b3';
-const containerHeight = 450;
+const containerHeight = 410;
 const containerWidth = 8 * containerHeight / 12;
 const surfaceWidth = 8;
 const innerMargin = 50; 
@@ -87,6 +87,8 @@ function drawCanvas() {
     drawFrontView();
     drawTopView();
     drawPoints();
+    drawHorizontalScale();
+    drawVerticalScale();
 }
 
 function drawFrontView() {
@@ -453,10 +455,10 @@ function updatePointsFrontView(newAngle) {
 
 function drawProtractor(centerX, centerY, radius) {
     // Create a group to hold all the protractor elements.
-    const oneview = draw.group();
+    const oneView = draw.group();
     
     // Draw the outer circle.
-    oneview.circle(radius * 2)
+    oneView.circle(radius * 2)
     .center(centerX, centerY)
     .fill('none')
     .stroke({ width: 2, color: 'black' });
@@ -471,7 +473,7 @@ function drawProtractor(centerX, centerY, radius) {
         const x2 = centerX + innerRadius * Math.cos(radian);
         const y2 = centerY + innerRadius * Math.sin(radian);
         
-        oneview.line(x1, y1, x2, y2)
+        oneView.line(x1, y1, x2, y2)
         .stroke({ width: 1, color: 'black' });
         
         if (angle % 10 === 0) {
@@ -479,7 +481,7 @@ function drawProtractor(centerX, centerY, radius) {
             const textX = centerX + textRadius * Math.cos(radian);
             const textY = centerY + textRadius * Math.sin(radian);
             
-            oneview.text(angle.toString())
+            oneView.text(angle.toString())
             .font({ size: 12, anchor: 'middle', fill: 'black' })
             .attr({
                 'text-anchor': 'middle',
@@ -491,7 +493,54 @@ function drawProtractor(centerX, centerY, radius) {
     }
     
     // Return the group so it can be used/manipulated later.
-    return oneview;
+    return oneView;
+}
+
+function drawHorizontalScale() {
+    const startX = 3/4 * canvasWidth - containerWidth / 2;
+    const startY = canvasHeight / 2 + containerHeight / 2 + 25;
+    const endX = 3/4 * canvasWidth + containerWidth / 2;
+    const endY = canvasHeight / 2 + containerHeight / 2;
+    
+    const numPoints = 80;
+    const step = (endX - startX) / numPoints;
+    draw.rect(endX - startX + 15, 35)
+        .center(startX + (endX - startX) / 2, startY - 6)
+        .fill('#deb887')
+        .stroke({ color: 'black', width: 1 });
+    
+    for (let i = 0; i <= numPoints; i++) {
+        let x = startX + i * step;
+        let lineHeight = i % 5 === 0 ? 20 : 10; // Longer lines for every 10th mark
+        draw.line(x, startY - 23, x, startY - 23 + lineHeight).stroke({ width: 2, color: '#000' });
+
+        if (i % 10 === 0) {
+            draw.text(i.toString()).move(x, startY + 3).font({ size: 8, anchor: 'middle' });
+        }
+    }
+}
+
+function drawVerticalScale() {
+    const startX = 3/4 * canvasWidth + containerWidth / 2;
+    const startY = canvasHeight / 2 - containerHeight / 2;
+    const endY = canvasHeight / 2 + containerHeight / 2;
+    
+    const numPoints = 120;
+    const step = (startY - endY) / numPoints;
+    draw.rect(35, endY - startY + 7.5)
+        .center(startX + 20, startY + (endY - startY) / 2)
+        .fill('#deb887')
+        .stroke({ color: 'black', width: 1 });
+    
+    for (let i = 0; i <= numPoints; i++) {
+        let y = startY - i * step;
+        let lineHeight = i % 5 === 0 ? 20 : 10; // Longer lines for every 10th mark
+        draw.line(startX + 5, y, startX + lineHeight, y).stroke({ width: 2, color: '#000' });
+
+        if (i % 10 === 0) {
+            draw.text(i.toString()).move(startX + lineHeight + 8, y - 2).font({ size: 8, anchor: 'middle' });
+        }
+    }
 }
 
 drawCanvas();
