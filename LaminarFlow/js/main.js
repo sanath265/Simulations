@@ -548,8 +548,8 @@ function drawVerticalScale() {
 }
 
 function addOptionToDragAndZoom() {
-    draw.text("zoom with the scroll wheel").move(10, canvasHeight - 50).font({ size: 20, anchor: 'left' });
-    draw.text("drag mouse to move image").move(10, canvasHeight - 25).font({ size: 20, anchor: 'left' });
+    draw.text("zoom with the scroll wheel").move(10, canvasHeight - 50).font({ size: 16, anchor: 'left' });
+    draw.text("After zooming, drag mouse to move image").move(10, canvasHeight - 25).font({ size: 16, anchor: 'left' });
     const defaultViewbox = { x: 0, y: 0, width: canvasWidth, height: canvasHeight };
     draw.viewbox(defaultViewbox.x, defaultViewbox.y, defaultViewbox.width, defaultViewbox.height);
     
