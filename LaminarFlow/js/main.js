@@ -306,7 +306,7 @@ function drawPoints() {
     dots = {
         red: {
             radiusFactor: 10 / 40,
-            rotationFactor: 4 / 10,
+            rotationFactor: (4 / 10) ** 2,
             initialAngle: null,
             effectiveAngle: null,
             path: null,
@@ -314,7 +314,7 @@ function drawPoints() {
         },
         green: {
             radiusFactor: 20 / 40,
-            rotationFactor: 4 / 20,
+            rotationFactor: (4 / 20) ** 2,
             initialAngle: null,
             effectiveAngle: null,
             path: null,
@@ -322,7 +322,7 @@ function drawPoints() {
         },
         blue: {
             radiusFactor: 35 / 40,
-            rotationFactor: 4 / 35,
+            rotationFactor: (4 / 35) ** 2,
             initialAngle: null,
             effectiveAngle: null,
             path: null,
@@ -335,7 +335,7 @@ function drawPoints() {
             centerX: 3 * canvasWidth / 4,
             centerY: canvasHeight / 2 - containerHeight / 2 + 0.25 * containerHeight,
             amplitude: (10 / 40) * (containerWidth / 2),
-            rotationFactor: 4 / 10,
+            rotationFactor: (4 / 10) ** 2,
             initialAngle: null,
             effectiveAngle: null,
             path: null,
@@ -345,7 +345,7 @@ function drawPoints() {
             centerX: 3 * canvasWidth / 4,
             centerY: canvasHeight / 2 - containerHeight / 2 + 0.5 * containerHeight,
             amplitude: (20 / 40) * (containerWidth / 2),
-            rotationFactor: 4 / 20,
+            rotationFactor: (4 / 20) ** 2,
             initialAngle: null,
             effectiveAngle: null,
             path: null,
@@ -355,7 +355,7 @@ function drawPoints() {
             centerX: 3 * canvasWidth / 4,
             centerY: canvasHeight / 2 - containerHeight / 2 + 0.75 * containerHeight,
             amplitude: (35 / 40) * (containerWidth / 2),
-            rotationFactor: 4 / 35,
+            rotationFactor: (4 / 35) ** 2,
             initialAngle: null,
             effectiveAngle: null,
             path: null,
