@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laminar Flow</title>
+    <title>Material balances in liquid-liquid extraction</title>
     <link rel="stylesheet" href="main.css">
     <script src="https://kit.fontawesome.com/9d19ad28f4.js"></script>
     <!-- Bootstrap CSS -->
@@ -101,25 +101,7 @@
             link.click(); // Trigger the download
             document.body.removeChild(link); // Clean up
         }
-        
-        // Function to reset the canvas
-        function resetCanvas() {
-            console.log('Reset button clicked');
-            
-            // Reset water height and diameter
-            waterHeight = parseFloat(document.getElementById('liquidHeight').value) * 3.5;
-            diameter = parseFloat(document.getElementById('drainDiameter').value) * 3.5;
-            
-            // Stop any ongoing animations
-            stopTimer();
-            stopDropletAnimation();
-            
-            // Reset the valve state
-            isRotated = false;
-            
-            // Redraw the canvas
-            drawCanvas();
-        }
+
         
         // Close the hamburger menu when clicking outside
         document.addEventListener('click', (event) => {
