@@ -110,6 +110,10 @@ body {
     width: 100px; /* Set a fixed width for the buttons */
 }
 
+#svg-container.measure-mode {
+    cursor: url("assets/hydrometer.png") 16 16, auto;
+  }
+
 @media (max-width: 600px) {
     body {
         padding: 10px;

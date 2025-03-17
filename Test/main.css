@@ -43,7 +43,7 @@ body {
 }
 
 #svg-container {
-    border: 2px solid #ccc;
+    border: 2px solid red ;
     margin: 20px auto;
     width: 800px;
     height: 656px;

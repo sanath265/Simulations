@@ -3,7 +3,106 @@ const canvasWidth = 1000;
 const canvasHeight = 600;
 const draw = SVG().addTo('#svg-container').size(canvasWidth, canvasHeight);
 
-// Global variables for table and pumps
+// Global groups for layering (we declare them as let so we can reinitialize them on redraw)
+let pipeGroup, waterGroup, uiGroup;
+
+// GLOBAL FLAG FOR MEASURE MODE
+let measureMode = false;
+
+// ---------------------------
+// TOOLTIP SETUP (placed in the UI group)
+// ---------------------------
+let densityTooltip, densityTooltipRect, densityTooltipText;
+let moleFractionTooltip, tooltipRect, tooltipText;
+
+function initTooltips() {
+  densityTooltip = uiGroup.group().attr({ opacity: 0, pointerEvents: 'none' });
+  densityTooltipRect = densityTooltip
+    .rect(1, 1)
+    .fill({ color: '#ffffcc' })  // light yellow background
+    .stroke({ color: '#000', width: 1 });
+  densityTooltipText = densityTooltip
+    .text('')
+    .font({ size: 12, family: 'Arial' })
+    .fill('#000');
+
+  moleFractionTooltip = uiGroup.group().hide();
+  tooltipRect = moleFractionTooltip
+    .rect(1, 1)
+    .fill({ color: '#fff' })
+    .stroke({ color: '#000', width: 1 });
+  tooltipText = moleFractionTooltip
+    .text('')
+    .font({ size: 12, family: 'Arial' })
+    .fill('#000');
+}
+
+// Functions to show/hide density tooltip
+function showDensityTooltip(density, event) {
+  densityTooltipText.clear().plain(density + " g/mL");
+  setTimeout(() => {
+    const padding = 5;
+    let bbox = densityTooltipText.bbox();
+    densityTooltipRect
+      .size(bbox.width + 2 * padding, bbox.height + 2 * padding)
+      .move(bbox.x - padding, bbox.y - padding);
+  }, 0);
+
+  // Position tooltip near the mouse pointer
+  const pt = draw.node.createSVGPoint();
+  pt.x = event.clientX;
+  pt.y = event.clientY;
+  const svgP = pt.matrixTransform(draw.node.getScreenCTM().inverse());
+  densityTooltip.move(svgP.x + 10, svgP.y + 10).attr({ opacity: 1 }).front();
+}
+
+function hideDensityTooltip() {
+  densityTooltip.attr({ opacity: 0 });
+}
+
+// ---------------------------
+// ADD INVISIBLE OVERLAYS ON TANKS
+// ---------------------------
+function addDensityOverlay(x, y, width, height, density) {
+  // Add the overlay to the uiGroup so it appears on top
+  let overlay = uiGroup.rect(width, height).move(x, y).fill({ color: '#fff', opacity: 0 });
+  overlay.on('mousemove', (event) => {
+    showDensityTooltip(density, event);
+  });
+  overlay.on('mouseout', hideDensityTooltip);
+}
+
+  
+
+function addDensityOverlays() {
+  // Based on drawBracket() parameters, we assume each tank's bounding box is:
+  // x: centerX - (width/2), y: canvasHeight - 125, width: provided width, height: 125
+  // Feed Tank: drawn with drawBracket(100, canvasHeight, 125, 125, ...);
+  let feedX = 100 - 125 / 2;
+  let feedY = canvasHeight - 125;
+  addDensityOverlay(feedX, feedY, 125, 125, "1.24");
+
+  // Raffinate Tank: drawn with drawBracket(475, canvasHeight, 125 * 0.58, 125, ...);
+  let raffWidth = 125 * 0.58;
+  let raffX = 475 - raffWidth / 2;
+  let raffY = canvasHeight - 125;
+  addDensityOverlay(raffX, raffY, raffWidth, 125, "1.48");
+
+  // Extract Tank: drawn with drawBracket(canvasWidth - 100, canvasHeight, 125, 125, ...);
+  let extractX = (canvasWidth - 100) - 125 / 2;
+  let extractY = canvasHeight - 125;
+  addDensityOverlay(extractX, extractY, 125, 125, "1.04");
+
+  // Solvent Tank: drawn with drawBracket(canvasWidth - 300, canvasHeight, 125 * 0.7, 125, ...);
+  let solvWidth = 125 * 0.7;
+  let solvX = (canvasWidth - 300) - solvWidth / 2;
+  let solvY = canvasHeight - 125;
+  addDensityOverlay(solvX, solvY, solvWidth, 125, "1.00");
+}
+
+// ---------------------------
+// GLOBAL VARIABLES FOR TABLE, PUMPS, TANKS, ETC.
+// ---------------------------
 const tableWidth = canvasWidth - 500;
 const tableHeight = 20;
 const legWidth = 20;
@@ -11,13 +110,13 @@ const legHeight = 80;
 const tableX = (canvasWidth - tableWidth) / 2;
 const tableY = canvasHeight - legHeight - tableHeight;
 
-let pump1 = null;
-let pump2 = null;
-let isRotatedPump1 = false;
-let isRotatedPump2 = false;
+let pump1 = null;   // Feed pump (auto-controlled)
+let pump2 = null;   // Solvent pump (manually toggled)
+let isRotatedPump1 = false; // (Not used for manual control on feed pump)
+let isRotatedPump2 = false; // For solvent pump
 
-let pump12 = null;
-let pump22 = null;
+let pump12 = null;  // Feed valve (auto-controlled; manual clicks disabled)
+let pump22 = null;  // Solvent valve (manually toggled)
 
 let leftPipe = null;
 let leftPipe2 = null;
@@ -30,12 +129,14 @@ let rightPipe3 = null;
 let rightPipe4 = null;
 
 // GLOBAL VARIABLES FOR TANK FILLING (in mL)
-let extractTankVolume = 0;   // fills at 8.08 mL/s
-let raffinateTankVolume = 0; // fills at 1.22 mL/s
-const maxTankVolume = 1000;
+let extractTankVolume = 0;   // This volume is used for the raffinate tank display
+let raffinateTankVolume = 0; // This volume is used for the extract tank display
+const maxTankVolume = 1000; 
+const maxRaffinateVolume = 300; // Raffinate tank max volume
+const maxSolventVolume = 500;   // Solvent tank max volume
 
-const extractFillRate = 1.2;  // mL/s for extract tank
-const raffinateFillRate = 8.1; // mL/s for raffinate tank
+const extractFillRate = 1.2;  // mL/s for extract tank (displayed in raffinate tank)
+const raffinateFillRate = 8.1; // mL/s for raffinate tank (displayed in extract tank)
 
 // Global variables to store drawn liquid elements so they can be updated.
 let extractLiquidElement = null;
@@ -46,8 +147,8 @@ let extractFillTimer = null;
 let raffinateFillTimer = null;
 
 // GLOBAL VARIABLES FOR DRAINING (in mL)
-let feedTankVolume = maxTankVolume;      // Feed tank full initially
-let solventTankVolume = maxTankVolume;   // Solvent tank full initially
+let feedTankVolume = maxTankVolume;
+let solventTankVolume = maxSolventVolume;
 
 const feedDrainRate = 5.6;   // mL/s for feed tank
 const solventDrainRate = 3.2; // mL/s for solvent tank
@@ -58,6 +159,19 @@ let solventDrainTimer = null;
 // To hold the drawn liquid elements for feed and solvent tanks
 let feedLiquidElement = null;
 let solventLiquidElement = null;
+
+// Global timeout IDs for scheduled filling
+let leftFillTimeout = null;
+let rightFillTimeout = null;
+
+// Global timer for auto-starting the feed pump (after 6 sec)
+let feedAutoStartTimer = null;
+
+// Starting coordinates for pump1 and pump2:
+const pump1StartX = 100;
+const pump1StartY = 450; // pump1 is drawn at (100,325)
+const pump2StartX = 700;
+const pump2StartY = 450;
 
 // ***** MOLE FRACTION TOOLTIP SETUP WITH BACKGROUND & BORDER *****
 const moleFractions = {
@@ -71,78 +185,78 @@ const moleFractions = {
   "R3": { flow: 1.8, xAA: 0.05, xC: 0.93, xW: 0.02 }
 };
 
-let moleFractionTooltip = draw.group().hide();
-
-let tooltipRect = moleFractionTooltip
-  .rect(1, 1)
-  .fill({ color: '#fff' })
-  .stroke({ color: '#000', width: 1 });
-
-let tooltipText = moleFractionTooltip
-  .text('')
-  .font({ size: 12, family: 'Arial' })
-  .fill('#000');
-
 function showTooltip(label, event) {
   const data = moleFractions[label];
   if (!data) return;
-  const textContent = `xAA = ${data.xAA}, xC = ${data.xC}, xW = ${data.xW}`;
-  tooltipText.text(textContent);
   
+  tooltipText.clear().text(function(add) {
+      add.plain("X");
+      add.tspan("AA").attr({ style: "font-size:0.7em;" });
+      add.plain(" = " + data.xAA + ", X");
+      add.tspan("C").attr({ style: "font-size:0.7em;" });
+      add.plain(" = " + data.xC + ", X");
+      add.tspan("W").attr({ style: "font-size:0.7em;" });
+      add.plain(" = " + data.xW);
+    });
+    
   setTimeout(() => {
     let bbox = tooltipText.bbox();
     const padding = 5;
-    tooltipRect.size(bbox.width + 2 * padding, bbox.height + 2 * padding);
-    tooltipRect.move(bbox.x - padding, bbox.y - padding);
+    tooltipRect.size(bbox.width + 2 * padding, bbox.height + 2 * padding)
+               .move(bbox.x - padding, bbox.y - padding);
   }, 0);
   
   const pt = draw.node.createSVGPoint();
   pt.x = event.clientX;
   pt.y = event.clientY;
   const svgP = pt.matrixTransform(draw.node.getScreenCTM().inverse());
+  moleFractionTooltip.attr({ opacity: 1 }).front();
   moleFractionTooltip.move(svgP.x + 10, svgP.y + 10).front().show();
 }
 
 function hideTooltip() {
-  moleFractionTooltip.hide();
+  moleFractionTooltip.attr({ opacity: 0 });
 }
-// ***** END MOLE FRACTION TOOLTIP SETUP *****
-
-// DRAWING FUNCTIONS
 
 function drawCanvas() {
+  // Clear the drawing and reinitialize groups
   draw.clear();
-  // Recreate the tooltip after clearing the canvas.
-  moleFractionTooltip = draw.group();
-  tooltipRect = moleFractionTooltip
-    .rect(1, 1)
-    .fill({ color: '#fff' })
-    .stroke({ color: '#000', width: 1 });
-  tooltipText = moleFractionTooltip
-    .text('')
-    .font({ size: 12, family: 'Arial' })
-    .fill('#000');
-  moleFractionTooltip.hide();
-
+  pipeGroup = draw.group();
+  waterGroup = draw.group();
+  uiGroup = draw.group();
+  
+  // Initialize tooltips (which are added to uiGroup)
+  initTooltips();
+  
+  // Draw background elements, pipes, pumps, tanks, texts, and overlays
   drawRectangleWithThreeSquares(canvasWidth / 2, canvasHeight / 2 - 50, 150, 350);
   drawPipes();
   drawPumps();
   drawTanks();
   drawTexts();
+  addDensityOverlays();
   addOptionToDragAndZoom();
+  
+  // Set layering: pipes at bottom, water in middle, UI on top.
+  pipeGroup.back();
+  waterGroup.front();
+  uiGroup.front();
 }
 
-// Draw the four tanks (beakers).
 function drawTanks() {
-  feedLiquidElement = drawLiquidRectangle(100, canvasHeight, 125, 10, 125 - 2 * 10, 'red', 0.52);
-  solventLiquidElement = drawLiquidRectangle(canvasWidth - 300, canvasHeight, 125, 10, 125 - 20);
-  drawBracket(100, canvasHeight, 125, 125, 10, 20);
-  drawBracket(475, canvasHeight, 125, 125, 10, 20);
-  drawBracket(canvasWidth - 100, canvasHeight, 125, 125, 10, 20);
-  drawBracket(canvasWidth - 300, canvasHeight, 125, 125, 10, 20);
+  // Feed Tank (max 1000 mL)
+  feedLiquidElement = drawLiquidRectangle(100, canvasHeight, 125, 10, 125 - 20, 'red', 0.52);
+  // Solvent Tank (max 500 mL)
+  solventLiquidElement = drawLiquidRectangle(canvasWidth - 300, canvasHeight, 125 * 0.7, 10, 125 - 20, '#c1c1ff', 0.7);
+  
+  // Brackets for tanks
+  drawBracket(100, canvasHeight, 125, 125, 10, 20, 1000);
+  drawBracket(475, canvasHeight, 125 * 0.58, 125, 10, 20, maxRaffinateVolume);
+  drawBracket(canvasWidth - 100, canvasHeight, 125, 125, 10, 20, 1000);
+  drawBracket(canvasWidth - 300, canvasHeight, 125 * 0.7, 125, 10, 20, maxSolventVolume);
 }
 
-function drawBracket(startX, startY, width, height, surfaceWidth, holderLength, liquidColor = '#c1c1ff', liquidColorOpacity = 0.5) {
+function drawBracket(startX, startY, width, height, surfaceWidth, holderLength, maxVolume, liquidColor = '#c1c1ff', liquidColorOpacity = 0.7) {
   const d = holderLength / Math.sqrt(2);
   
   const P0 = { x: startX, y: startY };
@@ -165,30 +279,42 @@ function drawBracket(startX, startY, width, height, surfaceWidth, holderLength, 
   const points = [P0, P1, P2, P3, P4, P5, P6, P7, Q6, Q5, Q4, Q3, Q2, Q1, P0];
   const pointString = points.map(pt => `${pt.x},${pt.y}`).join(" ");
   
-  draw.polyline(pointString)
+  let bracket = draw.polyline(pointString)
     .fill('#e6e6e6')
     .stroke({ color: '#898989', width: 2 });
+  pipeGroup.add(bracket);
   
-  const maxVolume = 1000;
-  const tickInterval = 20; // 10 mL per tick
+  let tickInterval = 10;
+  let index = 250;
+  if (maxVolume === 1000) {
+    index = 250;
+    tickInterval = 20;
+  } else if (maxVolume === 300) {
+    index = 100;
+    tickInterval = 10;
+  } else if (maxVolume === 500) {
+    index = 250;
+    tickInterval = 10;
+  }
   const numTicks = maxVolume / tickInterval;
   const liquidMaxHeight = height - 2 * surfaceWidth;
   const bottomY = startY - surfaceWidth;
   const leftX = startX - (width - 2 * surfaceWidth) / 2;
-  let tickLength = 3;
   
   for (let i = 0; i <= numTicks; i++) {
     const tickVolume = i * tickInterval;
-    tickLength = tickVolume % 50 === 0 ? 20 : 10;
+    const tickLength = (tickVolume % 50 === 0) ? 20 : 10;
     const tickY = bottomY - (tickVolume / maxVolume) * liquidMaxHeight;
-    draw.line(leftX, tickY, leftX + tickLength, tickY)
+    let tick = draw.line(leftX, tickY, leftX + tickLength, tickY)
       .stroke({ color: '#000', width: 1 });
-    if (tickVolume % 250 === 0) {
-      if (tickVolume === 0) continue;
-      const textLabel = draw.text(tickVolume.toString() + " ml")
+    pipeGroup.add(tick);
+
+    if (tickVolume % index === 0 && tickVolume !== 0) {
+      const textLabel = draw.text(tickVolume.toString() + " mL")
         .font({ family: 'Arial', size: 10 })
         .move(leftX + tickLength + 2, tickY - 5);
       textLabel.attr({ 'text-anchor': 'start' });
+      uiGroup.add(textLabel);
     }
   }
 }
@@ -197,10 +323,11 @@ function drawRectangleWithThreeSquares(centerX, centerY, rectWidth, rectHeight) 
   const startX = centerX - rectWidth / 2;
   const startYMain = centerY - rectHeight / 2;
   
-  draw.rect(rectWidth, rectHeight)
+  let mainRect = draw.rect(rectWidth, rectHeight)
     .move(startX, startYMain)
     .fill('none')
     .stroke({ color: '#000', width: 2 });
+  pipeGroup.add(mainRect);
   
   const squareSize = rectWidth - 60;
   const gap = (rectHeight - 3 * squareSize) / 4;
@@ -208,14 +335,15 @@ function drawRectangleWithThreeSquares(centerX, centerY, rectWidth, rectHeight) 
   for (let i = 0; i < 3; i++) {
     const xPos = startX + (rectWidth - squareSize) / 2;
     const yPos = startYMain + gap + i * (squareSize + gap);
-    draw.rect(squareSize, squareSize)
+    let square = draw.rect(squareSize, squareSize)
       .move(xPos, yPos)
       .fill('#ccc')
       .stroke({ color: '#000', width: 1 });
+    pipeGroup.add(square);
   }
 }
 
-function drawLiquidRectangle(startX, startY, width, surfaceWidth, liquidHeight, fillColor = '#c1c1ff', fillOpacity = 0.2) {
+function drawLiquidRectangle(startX, startY, width, surfaceWidth, liquidHeight, fillColor = '#c1c1ff', fillOpacity = 0.7) {
   const rectWidth = width - 2 * surfaceWidth;
   const rectX = startX - rectWidth / 2;
   const rectY = startY - surfaceWidth;
@@ -228,30 +356,34 @@ function drawLiquidRectangle(startX, startY, width, surfaceWidth, liquidHeight, 
     Z
   `;
   
-  return draw.path(pathString)
+  let liquid = draw.path(pathString)
     .fill({ color: fillColor, opacity: fillOpacity });
+  waterGroup.add(liquid);
+  return liquid;
 }
 
 function drawPipeWithCurves(pathString, pipeWidth = 15, strokeColor = '#f7f7f7', outlineColor = '#d5d5d5') {
-  draw.path(pathString)
+  let outline = draw.path(pathString)
     .fill('none')
     .stroke({
       color: outlineColor,
       width: pipeWidth + 4,
       linejoin: 'round'
     });
-  draw.path(pathString)
+  pipeGroup.add(outline);
+  let pipe = draw.path(pathString)
     .fill('none')
     .stroke({
       color: strokeColor,
       width: pipeWidth,
       linejoin: 'round'
     });
+  pipeGroup.add(pipe);
 }
 
 function drawPipes() {
   let startX = 100;
-  let startY = canvasHeight - 30;
+  let startY = canvasHeight - 12;
   
   // Left pipe segments
   leftPipe = `
@@ -276,7 +408,7 @@ function drawPipes() {
   
   leftPipe4 = `
     M ${startX + 375} ${94.5 + 91 + 19 + 91 + 19 + 91} 
-    L ${startX + 375} ${94.5 + 91 + 19 + 91 + 19 + 91 + 180} 
+    L ${startX + 375} ${startY} 
   `;
   drawPipeWithCurves(leftPipe4);
   
@@ -284,9 +416,9 @@ function drawPipes() {
   startX = 700;
   rightPipe = `
     M ${startX} ${startY} 
-    L ${startX} ${startY - 130} 
-    L ${startX - 170} ${startY - 130} 
-    L ${startX - 170} ${startY - 164}
+    L ${startX} ${startY - 130 - 17} 
+    L ${startX - 170} ${startY - 130 - 17} 
+    L ${startX - 170} ${startY - 182.5}
   `;
   drawPipeWithCurves(rightPipe);
   
@@ -306,21 +438,21 @@ function drawPipes() {
     M ${startX - 170} ${94.5} 
     L ${startX - 170} ${50} 
     L ${startX + 200} ${50}
-    L ${startX + 200} ${startY + 15}
+    L ${startX + 200} ${startY}
   `;
   drawPipeWithCurves(rightPipe4);
 }
 
-function drawPump(valveCenterX, valveCenterY, radius) {
-  const valveGroup = draw.group();
+function drawPump(valveCenterX, valveCenterY, radius, opacity = 1) {
+  const valveGroup = uiGroup.group();
   valveGroup.circle(40)
-    .fill('#b4b4ff')
-    .stroke({ color: 'black', width: 2 })
+    .fill({ color: '#b4b4ff', opacity: opacity })
+    .stroke({ color: 'black', opacity: opacity, width: 2 })
     .center(valveCenterX, valveCenterY)
     .front();
   valveGroup.rect(10, 44)
-    .fill('#c8c8ff')
-    .stroke({ color: 'black', width: 2, linecap: 'round' })
+    .fill({ color: '#c8c8ff', opacity: opacity })
+    .stroke({ color: 'black', opacity: opacity, width: 2, linecap: 'round' })
     .center(valveCenterX, valveCenterY)
     .front();
   return valveGroup;
@@ -328,8 +460,8 @@ function drawPump(valveCenterX, valveCenterY, radius) {
 
 function drawTexts() {
   // Tank labels
-  drawCenteredText(canvasWidth / 2 - 50, canvasHeight - 35, "raffinate tank", 12);
-  drawCenteredText(canvasWidth / 2 + 180, canvasHeight - 35, "solvent tank", 12);
+  drawCenteredText(canvasWidth / 2 - 60, canvasHeight - 15, "raffinate tank", 12);
+  drawCenteredText(canvasWidth / 2 + 170, canvasHeight - 15, "solvent tank", 12);
   
   let startX = 310;
   let startY = 450;
@@ -374,8 +506,8 @@ function drawTexts() {
   textS.on('mouseout', hideTooltip);
   
   // Tank names for feed and extract tanks
-  drawCenteredText(80, canvasHeight - 35, "feed tank", 12);
-  drawCenteredText(canvasWidth - 125, canvasHeight - 35, "extract tank", 12);
+  drawCenteredText(80, canvasHeight - 15, "feed tank", 12);
+  drawCenteredText(canvasWidth - 125, canvasHeight - 15, "extract tank", 12);
 }
 
 function drawCenteredText(centerX, centerY, text, fontSize = 16, fillColor = '#000', fontFamily = 'Arial', strokeColor = null, strokeWidth = 0) {
@@ -392,31 +524,156 @@ function drawCenteredText(centerX, centerY, text, fontSize = 16, fillColor = '#0
   if (strokeColor && strokeWidth > 0) {
     textElement.stroke({ color: strokeColor, width: strokeWidth });
   }
+  uiGroup.add(textElement);
   return textElement;
 }
 
-// ****************************************
-// FLOW & FILLING FUNCTIONS
-// ****************************************
+// ======================================================
+// HELPER FUNCTION FOR TANK FILLING
+// ======================================================
+function updateTankDisplay(liquidElement, centerX, startY, width, tankHeight, surfaceWidth, currentVolume, maxVolume, fillColor, fillOpacity) {
+  const maxLiquidHeight = tankHeight - 2 * surfaceWidth;
+  const liquidHeight = (currentVolume / maxVolume) * maxLiquidHeight;
+  if (liquidElement) { liquidElement.remove(); }
+  return drawLiquidRectangle(centerX, startY, width, surfaceWidth, liquidHeight, fillColor, fillOpacity);
+}
 
-// This function checks if any stop conditions are met.
+// ======================================================
+// FILLING FUNCTIONS & DISPLAY UPDATES
+// ======================================================
+function updateRaffinateTankDisplay() {
+  extractLiquidElement = updateTankDisplay(
+    extractLiquidElement,
+    475,
+    canvasHeight,
+    125 * 0.58,
+    125,
+    10,
+    extractTankVolume,
+    maxRaffinateVolume,
+    'red',
+    0.5
+  );
+  extractLiquidElement.front();
+  if (extractTankVolume >= maxRaffinateVolume) { clearInterval(extractFillTimer); extractFillTimer = null; }
+  checkStopFlowConditions();
+}
+
+function updateExtractTankDisplay() {
+  raffinateLiquidElement = updateTankDisplay(
+    raffinateLiquidElement,
+    canvasWidth - 100,
+    canvasHeight,
+    125,
+    125,
+    10,
+    raffinateTankVolume,
+    1000,
+    'red',
+    0.39
+  );
+  raffinateLiquidElement.front();
+  if (raffinateTankVolume >= 1000) { clearInterval(raffinateFillTimer); raffinateFillTimer = null; }
+  checkStopFlowConditions();
+}
+
+function updateFeedTankDisplay() {
+  feedLiquidElement = updateTankDisplay(
+    feedLiquidElement,
+    100,
+    canvasHeight,
+    125,
+    125,
+    10,
+    feedTankVolume,
+    1000,
+    'red',
+    0.52
+  );
+  feedLiquidElement.front();
+  if (feedTankVolume <= 0) { clearInterval(feedDrainTimer); feedDrainTimer = null; }
+  checkStopFlowConditions();
+}
+
+function updateSolventTankDisplay() {
+  solventLiquidElement = updateTankDisplay(
+    solventLiquidElement,
+    canvasWidth - 300,
+    canvasHeight,
+    125 * 0.7,
+    125,
+    10,
+    solventTankVolume,
+    maxSolventVolume,
+    '#c1c1ff',
+    0.7
+  );
+  solventLiquidElement.front();
+  if (solventTankVolume <= 0) { clearInterval(solventDrainTimer); solventDrainTimer = null; }
+  checkStopFlowConditions();
+}
+
+function startFillingRaffinate() {
+  if (extractFillTimer) clearInterval(extractFillTimer);
+  extractFillTimer = setInterval(() => {
+    extractTankVolume += extractFillRate * 0.1;
+    if (extractTankVolume >= maxRaffinateVolume) {
+      extractTankVolume = maxRaffinateVolume;
+      clearInterval(extractFillTimer); extractFillTimer = null;
+    }
+    updateRaffinateTankDisplay();
+  }, 100);
+}
+
+function startFillingExtract() {
+  if (raffinateFillTimer) clearInterval(raffinateFillTimer);
+  raffinateFillTimer = setInterval(() => {
+    raffinateTankVolume += raffinateFillRate * 0.1;
+    if (raffinateTankVolume >= 1000) {
+      raffinateTankVolume = 1000;
+      clearInterval(raffinateFillTimer); raffinateFillTimer = null;
+    }
+    updateExtractTankDisplay();
+  }, 100);
+}
+
+function startDrainingFeed() {
+  if (feedDrainTimer) clearInterval(feedDrainTimer);
+  feedDrainTimer = setInterval(() => {
+    feedTankVolume -= feedDrainRate * 0.1;
+    if (feedTankVolume < 0) { feedTankVolume = 0; }
+    updateFeedTankDisplay();
+  }, 100);
+}
+
+function startDrainingSolvent() {
+  if (solventDrainTimer) clearInterval(solventDrainTimer);
+  solventDrainTimer = setInterval(() => {
+    solventTankVolume -= solventDrainRate * 0.1;
+    if (solventTankVolume < 0) { solventTankVolume = 0; }
+    updateSolventTankDisplay();
+  }, 100);
+}
+
+// ======================================================
+// FLOW & DRAINING FUNCTIONS
+// ======================================================
 function checkStopFlowConditions() {
-  // Stop left flow if feed tank is empty.
   if (feedTankVolume <= 0 && leftWaterFlowing) {
     leftWaterFlowing = false;
     animateWaterStopForAllPipes(true, false);
   }
-  // Stop right flow if solvent tank is empty.
   if (solventTankVolume <= 0 && rightWaterFlowing) {
     rightWaterFlowing = false;
     animateWaterStopForAllPipes(false, true);
   }
-  // Stop all flows if either product tank is full.
-  if ((extractTankVolume >= maxTankVolume || raffinateTankVolume >= maxTankVolume) &&
+  if ((extractTankVolume >= maxRaffinateVolume || raffinateTankVolume >= 1000) &&
       (leftWaterFlowing || rightWaterFlowing)) {
     leftWaterFlowing = false;
     rightWaterFlowing = false;
     animateWaterStopForAllPipes(true, true);
+    pump2.animate(300).rotate(-90, pump2StartX - 100, pump2StartY - 10);
+    pump22.handle.animate(300).rotate(-40, pump2StartX - 100 + 50, pump2StartY - 80 + 20);  
   }
 }
 
@@ -429,6 +686,7 @@ function animateWaterFlow(pipePath, delay = 0, duration = 1000, waterColor, wate
       width: waterWidth,
       linejoin: 'round'
     });
+  waterGroup.add(water);
   const totalLength = water.node.getTotalLength();
   water.attr({
     'stroke-dasharray': totalLength,
@@ -445,9 +703,9 @@ function animateWaterFlow(pipePath, delay = 0, duration = 1000, waterColor, wate
 
 function animateWaterFlowForAllPipes(left = false, right = false) {
   const flowRates = {
-    rightPipe: 3.2,    
-    rightPipe2: 3.27,  
-    rightPipe3: 4.23,  
+    rightPipe: 3.2,
+    rightPipe2: 3.27,
+    rightPipe3: 4.23,
     rightPipe4: 8.08,
     leftPipe: 5.75,
     leftPipe2: 1.96,
@@ -455,14 +713,14 @@ function animateWaterFlowForAllPipes(left = false, right = false) {
     leftPipe4: 1.22
   };
   const opacities = {
-    rightPipe: 0.2,    
-    rightPipe2: 0.02,  
-    rightPipe3: 0.13,  
+    rightPipe: 0.7,
+    rightPipe2: 0.02,
+    rightPipe3: 0.13,
     rightPipe4: 0.39,
     leftPipe: 0.52,
-    leftPipe2: 0.27,
-    leftPipe3: 0.09,
-    leftPipe4: 0.05
+    leftPipe2: 0.5,
+    leftPipe3: 0.5,
+    leftPipe4: 0.5
   };
   const baseDuration = 800;
   const fastestFlowRate = Math.max(...Object.values(flowRates));
@@ -490,7 +748,7 @@ function animateWaterFlowForAllPipes(left = false, right = false) {
       delay += duration + 2000;
     });
     startDrainingFeed();
-    setTimeout(startFillingExtract, delay);
+    leftFillTimeout = setTimeout(startFillingRaffinate, delay - 2000);
   }
   if (right) {
     delay = 0;
@@ -498,15 +756,15 @@ function animateWaterFlowForAllPipes(left = false, right = false) {
       const rate = flowRates[key];
       const duration = Math.round((fastestFlowRate / rate) * baseDuration);
       const opacity = opacities[key];
-      if (key === 'rightPipe') { 
-        animateWaterFlow(pipe, delay, duration, '#c1c1ff', 16, 0.2, 'right');
+      if (key === 'rightPipe') {
+        animateWaterFlow(pipe, delay, duration, '#c1c1ff', 16, 0.7, 'right');
       } else {
         animateWaterFlow(pipe, delay, duration, 'red', 16, opacity, 'right');
       }
       delay += duration + 2000;
     });
     startDrainingSolvent();
-    setTimeout(startFillingRaffinate, delay);
+    rightFillTimeout = setTimeout(startFillingExtract, delay - 2000);
   }
 }
 
@@ -516,176 +774,47 @@ function animateWaterStopForAllPipes(left = false, right = false) {
       .filter(el => el.attr('data-pipe-side') === 'left')
       .forEach(el => el.remove());
     pump1.front();
-    if (extractFillTimer) {
-      clearInterval(extractFillTimer);
-      extractFillTimer = null;
-    }
+    if (extractFillTimer) { clearInterval(extractFillTimer); extractFillTimer = null; }
+    if (feedDrainTimer) { clearInterval(feedDrainTimer); feedDrainTimer = null; }
+    if (leftFillTimeout) { clearTimeout(leftFillTimeout); leftFillTimeout = null; }
+    if (feedAutoStartTimer) { clearTimeout(feedAutoStartTimer); feedAutoStartTimer = null; }
   }
   if (right) {
     draw.find('path')
       .filter(el => el.attr('data-pipe-side') === 'right')
       .forEach(el => el.remove());
     pump2.front();
-    if (raffinateFillTimer) {
-      clearInterval(raffinateFillTimer);
-      raffinateFillTimer = null;
+    if (raffinateFillTimer) { clearInterval(raffinateFillTimer); raffinateFillTimer = null; }
+    if (solventDrainTimer) { clearInterval(solventDrainTimer); solventDrainTimer = null; }
+    if (rightFillTimeout) { clearTimeout(rightFillTimeout); rightFillTimeout = null; }
+    if (solventLiquidElement) {
+      solventLiquidElement.front();
     }
   }
 }
 
-// FILLING FUNCTIONS & DISPLAY UPDATES
-
-function updateExtractTankDisplay() {
-  const tankHeight = 125; 
-  const surfaceWidth = 10;
-  const maxHeightTank = tankHeight - 2 * surfaceWidth;
-  const liquidHeight = (extractTankVolume / maxTankVolume) * maxHeightTank;
-  if (extractLiquidElement) {
-    extractLiquidElement.remove();
-  }
-  extractLiquidElement = drawLiquidRectangle(475, canvasHeight, 125, surfaceWidth, liquidHeight, 'red', 0.05);
-  // Bring the liquid element to the front so it covers the pipes.
-  extractLiquidElement.front();
-  if (extractTankVolume >= maxTankVolume) {
-    clearInterval(extractFillTimer);
-    extractFillTimer = null;
-  }
-  checkStopFlowConditions();
-}
-
-function updateRaffinateTankDisplay() {
-  const tankHeight = 125;
-  const surfaceWidth = 10;
-  const maxHeightTank = tankHeight - 2 * surfaceWidth;
-  const liquidHeight = (raffinateTankVolume / maxTankVolume) * maxHeightTank;
-  if (raffinateLiquidElement) {
-    raffinateLiquidElement.remove();
-  }
-  raffinateLiquidElement = drawLiquidRectangle(canvasWidth - 100, canvasHeight, 125, surfaceWidth, liquidHeight, 'red', 0.39);
-  // Bring the liquid element to the front.
-  raffinateLiquidElement.front();
-  if (raffinateTankVolume >= maxTankVolume) {
-    clearInterval(raffinateFillTimer);
-    raffinateFillTimer = null;
-  }
-  checkStopFlowConditions();
-}
-
-function updateFeedTankDisplay() {
-  const tankHeight = 125; 
-  const surfaceWidth = 10;
-  const maxHeightTank = tankHeight - 2 * surfaceWidth;
-  const liquidHeight = (feedTankVolume / maxTankVolume) * maxHeightTank;
-  if (feedLiquidElement) {
-    feedLiquidElement.remove();
-  }
-  feedLiquidElement = drawLiquidRectangle(100, canvasHeight, 125, surfaceWidth, liquidHeight, 'red', 0.52);
-  // Bring the liquid element to the front.
-  feedLiquidElement.front();
-  if (feedTankVolume <= 0) {
-    clearInterval(feedDrainTimer);
-    feedDrainTimer = null;
-  }
-  checkStopFlowConditions();
-}
-
-function updateSolventTankDisplay() {
-  const tankHeight = 125; 
-  const surfaceWidth = 10;
-  const maxHeightTank = tankHeight - 2 * surfaceWidth;
-  const liquidHeight = (solventTankVolume / maxTankVolume) * maxHeightTank;
-  if (solventLiquidElement) {
-    solventLiquidElement.remove();
-  }
-  solventLiquidElement = drawLiquidRectangle(canvasWidth - 300, canvasHeight, 125, surfaceWidth, liquidHeight, '#c1c1ff', 0.2);
-  // Bring the liquid element to the front.
-  solventLiquidElement.front();
-  if (solventTankVolume <= 0) {
-    clearInterval(solventDrainTimer);
-    solventDrainTimer = null;
-  }
-  checkStopFlowConditions();
-}
-
-function startFillingExtract() {
-  if (extractFillTimer) clearInterval(extractFillTimer);
-  extractFillTimer = setInterval(() => {
-    extractTankVolume += extractFillRate * 0.1;
-    if (extractTankVolume >= maxTankVolume) {
-      extractTankVolume = maxTankVolume;
-      clearInterval(extractFillTimer);
-      extractFillTimer = null;
-    }
-    updateExtractTankDisplay();
-  }, 100);
-}
-
-function startFillingRaffinate() {
-  if (raffinateFillTimer) clearInterval(raffinateFillTimer);
-  raffinateFillTimer = setInterval(() => {
-    raffinateTankVolume += raffinateFillRate * 0.1;
-    if (raffinateTankVolume >= maxTankVolume) {
-      raffinateTankVolume = maxTankVolume;
-      clearInterval(raffinateFillTimer);
-      raffinateFillTimer = null;
-    }
-    updateRaffinateTankDisplay();
-  }, 100);
-}
-
-function startDrainingFeed() {
-  if (feedDrainTimer) clearInterval(feedDrainTimer);
-  feedDrainTimer = setInterval(() => {
-    feedTankVolume -= feedDrainRate * 0.1;
-    if (feedTankVolume < 0) {
-      feedTankVolume = 0;
-    }
-    updateFeedTankDisplay();
-  }, 100);
-}
-
-function startDrainingSolvent() {
-  if (solventDrainTimer) clearInterval(solventDrainTimer);
-  solventDrainTimer = setInterval(() => {
-    solventTankVolume -= solventDrainRate * 0.1;
-    if (solventTankVolume < 0) {
-      solventTankVolume = 0;
-    }
-    updateSolventTankDisplay();
-  }, 100);
-}
-
+// ======================================================
 // PUMP SETUP & CLICK HANDLERS
-
+// ======================================================
 let leftWaterFlowing = false;
 let rightWaterFlowing = false;
 
 function drawPumps() {
-  const startX = 100;
-  const startY = 450;
-  drawLineBetweenPoints(draw, startX, startY - 125, startX + 60, startY - 130);
-  pump1 = drawPump(startX, startY - 125, 30);
+  const startX = pump1StartX;
+  const startY = pump1StartY;
+  drawLineBetweenPoints(draw, startX, startY - 125, startX + 60, startY - 130, 0.8);
+  pump1 = drawPump(startX, startY - 125, 30, 0.8);
   pump1.rotate(90, startX, startY - 125);
-  pump12 = createToggleWithTextRect(draw, startX + 50, startY - 150, 100, 40);
-  pump12.isOn = false;
+  pump1.autoOn = false;
+  pump12 = createToggleWithTextRect(draw, startX + 50, startY - 150, 100, 40, 0.8);
+  pump12.autoOn = false;
+  pump12.attr({ 'pointer-events': 'none' });
   
-  const startXP2 = 700;
+  const startXP2 = pump2StartX;
   drawLineBetweenPoints(draw, startXP2 - 100, startY - 10, startXP2 - 50, startY - 80);
   pump2 = drawPump(startXP2 - 100, startY - 10, 30);
-  pump22 = createToggleWithTextRect(draw, startXP2 - 100, startY - 100, 100, 40);
-  pump22.isOn = false;
-  
-  pump1.click(() => {
-    isRotatedPump1 = !isRotatedPump1;
-    if (isRotatedPump1) {
-      pump1.animate(300).rotate(-90, startX, startY - 125);
-    } else {
-      pump1.animate(300).rotate(90, startX, startY - 125);
-    }
-    updateLeftWaterFlow();
-  });
-  
-  pump2.click(() => {
+  pump2.on('click', () => {
+    if (!pump22.isOn) { return; }
     isRotatedPump2 = !isRotatedPump2;
     if (isRotatedPump2) {
       pump2.animate(300).rotate(90, startXP2 - 100, startY - 10);
@@ -695,37 +824,91 @@ function drawPumps() {
     updateRightWaterFlow();
   });
   
-  pump12.click(() => { updateLeftWaterFlow(); });
-  pump22.click(() => { updateRightWaterFlow(); });
+  pump22 = createToggleWithTextRect(draw, startXP2 - 100, startY - 100, 100, 40);
+  pump22.front();
+  pump22.isOn = false;
+  pump22.on('click', () => {
+    console.log('pump22 clicked');
+    updateRightWaterFlow();
+    if (!pump22.isOn) {
+      if (isRotatedPump2) {
+        isRotatedPump2 = false;
+        pump2.animate(300).rotate(-90, pump2StartX - 100, pump1StartY - 10);
+      }
+      if (rightWaterFlowing) {
+        rightWaterFlowing = false;
+        animateWaterStopForAllPipes(false, true);
+      }
+      if (feedAutoStartTimer) {
+        clearTimeout(feedAutoStartTimer);
+        feedAutoStartTimer = null;
+      }
+      return;
+    }
+  });
   
   pump1.front();
   pump2.front();
 }
 
 function updateLeftWaterFlow() {
-  if (isRotatedPump1 && pump12.isOn) {
-    if (!leftWaterFlowing) {
-      leftWaterFlowing = true;
-      animateWaterFlowForAllPipes(true, false);
-    }
-  } else {
-    if (leftWaterFlowing) {
-      leftWaterFlowing = false;
-      animateWaterStopForAllPipes(true, false);
-    }
+  // Feed pump auto-start is controlled via the timer.
+}
+
+function autoStartFeedPump() {
+  if (pump22.isOn && isRotatedPump2 && !pump1.autoOn) {
+    pump1.autoOn = true;
+    pump12.autoOn = true;
+    pump1.animate(300).rotate(-90, pump1StartX, pump1StartY - 125);
+    pump12.handle.animate(300).rotate(40, pump1StartX + 100, pump1StartY - 130);
+    leftWaterFlowing = true;
+    animateWaterFlowForAllPipes(true, false);
   }
+  feedAutoStartTimer = null;
 }
 
 function updateRightWaterFlow() {
-  if (isRotatedPump2 && pump22.isOn) {
+  if (!pump22.isOn) {
+    if (isRotatedPump2) {
+      isRotatedPump2 = false;
+      pump2.animate(300).rotate(-90, pump2StartX - 100, pump1StartY - 10);
+    }
+    if (rightWaterFlowing) {
+      rightWaterFlowing = false;
+      animateWaterStopForAllPipes(false, true);
+    }
+    if (feedAutoStartTimer) {
+      clearTimeout(feedAutoStartTimer);
+      feedAutoStartTimer = null;
+    }
+    if (pump1.autoOn) {
+      pump1.autoOn = false;
+      pump12.autoOn = false;
+      animateWaterStopForAllPipes(true, false);
+    }
+    return;
+  }
+  if (isRotatedPump2) {
     if (!rightWaterFlowing) {
       rightWaterFlowing = true;
       animateWaterFlowForAllPipes(false, true);
+    }
+    if (!pump1.autoOn && !feedAutoStartTimer) {
+      feedAutoStartTimer = setTimeout(autoStartFeedPump, 6000);
     }
   } else {
     if (rightWaterFlowing) {
       rightWaterFlowing = false;
       animateWaterStopForAllPipes(false, true);
+    }
+    if (feedAutoStartTimer) {
+      clearTimeout(feedAutoStartTimer);
+      feedAutoStartTimer = null;
+    }
+    if (pump1.autoOn) {
+      pump1.autoOn = false;
+      pump12.autoOn = false;
+      animateWaterStopForAllPipes(true, false);
     }
   }
 }
@@ -735,41 +918,20 @@ function resetAll() {
   extractTankVolume = 0;
   raffinateTankVolume = 0;
   feedTankVolume = maxTankVolume;
-  solventTankVolume = maxTankVolume;
-  if (extractFillTimer) {
-    clearInterval(extractFillTimer);
-    extractFillTimer = null;
-  }
-  if (raffinateFillTimer) {
-    clearInterval(raffinateFillTimer);
-    raffinateFillTimer = null;
-  }
-  if (feedDrainTimer) {
-    clearInterval(feedDrainTimer);
-    feedDrainTimer = null;
-  }
-  if (solventDrainTimer) {
-    clearInterval(solventDrainTimer);
-    solventDrainTimer = null;
-  }
-  if (extractLiquidElement) {
-    extractLiquidElement.remove();
-    extractLiquidElement = null;
-  }
-  if (raffinateLiquidElement) {
-    raffinateLiquidElement.remove();
-    raffinateLiquidElement = null;
-  }
-  if (feedLiquidElement) {
-    feedLiquidElement.remove();
-    feedLiquidElement = null;
-  }
-  if (solventLiquidElement) {
-    solventLiquidElement.remove();
-    solventLiquidElement = null;
-  }
+  solventTankVolume = maxSolventVolume;
+  if (extractFillTimer) { clearInterval(extractFillTimer); extractFillTimer = null; }
+  if (raffinateFillTimer) { clearInterval(raffinateFillTimer); raffinateFillTimer = null; }
+  if (feedDrainTimer) { clearInterval(feedDrainTimer); feedDrainTimer = null; }
+  if (solventDrainTimer) { clearInterval(solventDrainTimer); solventDrainTimer = null; }
+  if (extractLiquidElement) { extractLiquidElement.remove(); extractLiquidElement = null; }
+  if (raffinateLiquidElement) { raffinateLiquidElement.remove(); raffinateLiquidElement = null; }
+  if (feedLiquidElement) { feedLiquidElement.remove(); feedLiquidElement = null; }
+  if (solventLiquidElement) { solventLiquidElement.remove(); solventLiquidElement = null; }
   isRotatedPump1 = false;
   isRotatedPump2 = false;
+  leftWaterFlowing = false;
+  rightWaterFlowing = false;
+  if (feedAutoStartTimer) { clearTimeout(feedAutoStartTimer); feedAutoStartTimer = null; }
   updateExtractTankDisplay();
   updateRaffinateTankDisplay();
   updateFeedTankDisplay();
@@ -779,17 +941,23 @@ function resetAll() {
 
 document.getElementById('reset-button').addEventListener('click', resetAll);
 
-// DRAG & ZOOM FUNCTIONALITY (with pump click disabling during pan)
+// ======================================================
+// DRAG & ZOOM FUNCTIONALITY
+// ======================================================
 let isPanning = false;
 let panStart = { x: 0, y: 0 };
 
 function addOptionToDragAndZoom() {
-  draw.text("zoom with the scroll wheel")
-    .move(canvasWidth / 2 - 100, 0)
-    .font({ size: 16, anchor: 'left' });
-  draw.text("After zooming, drag mouse to move image")
-    .move(canvasWidth / 2 - 150, 15)
-    .font({ size: 16, anchor: 'left' });
+  uiGroup.add(
+    draw.text("zoom with the scroll wheel")
+      .move(canvasWidth / 2 - 100, 0)
+      .font({ size: 16, anchor: 'left' })
+  );
+  uiGroup.add(
+    draw.text("After zooming, drag mouse to move image")
+      .move(canvasWidth / 2 - 150, 15)
+      .font({ size: 16, anchor: 'left' })
+  );
   const defaultViewbox = { x: 0, y: 0, width: canvasWidth, height: canvasHeight };
   draw.viewbox(defaultViewbox.x, defaultViewbox.y, defaultViewbox.width, defaultViewbox.height);
   
@@ -832,7 +1000,7 @@ function addOptionToDragAndZoom() {
   
   draw.on('wheel', function(event) {
     event.preventDefault();
-    const zoomStep = 0.02;
+    const zoomStep = 0.15;
     const zoomFactor = event.deltaY < 0 ? (1 - zoomStep) : (1 + zoomStep);
     const vb = draw.viewbox();
     let newWidth = vb.width * zoomFactor;
@@ -853,18 +1021,21 @@ function addOptionToDragAndZoom() {
   });
 }
 
-drawCanvas();
-
-function createToggleWithTextRect(draw, x, y, width, height) {
-  const switchGroup = draw.group();
+// ======================================================
+// TOGGLE SWITCH CREATION FUNCTION
+// ======================================================
+function createToggleWithTextRect(draw, x, y, width, height, opacity = 1) {
+  const switchGroup = uiGroup.group();
   switchGroup.isOn = false;
   const handleWidth = 5;
   const handleHeight = height * 0.8;
   const handle = switchGroup.rect(handleWidth, handleHeight)
-    .fill('#aaa')
-    .move(x + (width - handleWidth) / 2, y - (height) / 2);
+    .fill({ color: '#aaa', opacity: opacity })
+    .move(x + (width - handleWidth) / 2, y - height / 2);
+  switchGroup.handle = handle;
+  
   switchGroup.rect(width, height)
-    .fill('#555')
+    .fill({ color: '#555', opacity: opacity })
     .radius(height / 5)
     .move(x, y);
   switchGroup.text('OFF')
@@ -887,7 +1058,11 @@ function createToggleWithTextRect(draw, x, y, width, height) {
   return switchGroup;
 }
 
-function drawLineBetweenPoints(draw, x1, y1, x2, y2, color = '#000', width = 2) {
-  return draw.line(x1, y1, x2, y2)
-    .stroke({ color: color, width: width, linecap: 'round' });
+function drawLineBetweenPoints(draw, x1, y1, x2, y2, opacity = 1, color = '#000', width = 2) {
+  let line = draw.line(x1, y1, x2, y2)
+    .stroke({ color: color, opacity: opacity, width: width, linecap: 'round' });
+  pipeGroup.add(line);
+  return line;
 }
+
+drawCanvas();
