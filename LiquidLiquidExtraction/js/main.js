@@ -245,7 +245,7 @@ function drawCanvas() {
 
 function drawTanks() {
   // Feed Tank (max 1000 mL)
-  feedLiquidElement = drawLiquidRectangle(100, canvasHeight, 125, 10, 125 - 20, 'red', 0.52);
+  feedLiquidElement = drawLiquidRectangle(100, canvasHeight, 125, 10, 125 - 20, 'red', 0.7);
   // Solvent Tank (max 500 mL)
   solventLiquidElement = drawLiquidRectangle(canvasWidth - 300, canvasHeight, 125 * 0.7, 10, 125 - 20, '#c1c1ff', 0.7);
   
@@ -552,7 +552,7 @@ function updateRaffinateTankDisplay() {
     extractTankVolume,
     maxRaffinateVolume,
     'red',
-    0.5
+    0.2
   );
   extractLiquidElement.front();
   if (extractTankVolume >= maxRaffinateVolume) { clearInterval(extractFillTimer); extractFillTimer = null; }
@@ -588,7 +588,7 @@ function updateFeedTankDisplay() {
     feedTankVolume,
     1000,
     'red',
-    0.52
+    0.7
   );
   feedLiquidElement.front();
   if (feedTankVolume <= 0) { clearInterval(feedDrainTimer); feedDrainTimer = null; }
@@ -673,7 +673,20 @@ function checkStopFlowConditions() {
     rightWaterFlowing = false;
     animateWaterStopForAllPipes(true, true);
     pump2.animate(300).rotate(-90, pump2StartX - 100, pump2StartY - 10);
-    pump22.handle.animate(300).rotate(-40, pump2StartX - 100 + 50, pump2StartY - 80 + 20);  
+    pump22.handle.animate(300).rotate(-40, pump2StartX - 100 + 50, pump2StartY - 80 + 20);
+    isRotatedPump1 = false;
+    isRotatedPump2 = false;
+    pump22.isOn = false; // Reset the pump state
+    pump12.isOn = false; // Reset the pump state
+    pump1.remove(); // Remove the pump from the drawing
+    pump12.remove(); // Remove the valve from the drawing
+    pump2.remove(); // Remove the pump from the drawing
+    pump22.remove(); // Remove the valve from the drawing
+    pump1 = null; // Reset the pump variable
+    pump12 = null; // Reset the valve variable
+    pump2 = null; // Reset the pump variable
+    pump22 = null; // Reset the valve 
+    drawPumps(); // Redraw the pumps and valves
   }
 }
 
@@ -717,10 +730,10 @@ function animateWaterFlowForAllPipes(left = false, right = false) {
     rightPipe2: 0.02,
     rightPipe3: 0.13,
     rightPipe4: 0.39,
-    leftPipe: 0.52,
-    leftPipe2: 0.5,
-    leftPipe3: 0.5,
-    leftPipe4: 0.5
+    leftPipe: 0.7,
+    leftPipe2: 0.6,
+    leftPipe3: 0.4,
+    leftPipe4: 0.2
   };
   const baseDuration = 800;
   const fastestFlowRate = Math.max(...Object.values(flowRates));
@@ -778,6 +791,9 @@ function animateWaterStopForAllPipes(left = false, right = false) {
     if (feedDrainTimer) { clearInterval(feedDrainTimer); feedDrainTimer = null; }
     if (leftFillTimeout) { clearTimeout(leftFillTimeout); leftFillTimeout = null; }
     if (feedAutoStartTimer) { clearTimeout(feedAutoStartTimer); feedAutoStartTimer = null; }
+
+    pump1.animate(300).rotate(90, pump1StartX, pump1StartY - 125);
+    pump12.handle.animate(300).rotate(-40, pump1StartX + 100, pump1StartY - 130);
   }
   if (right) {
     draw.find('path')
@@ -1000,7 +1016,7 @@ function addOptionToDragAndZoom() {
   
   draw.on('wheel', function(event) {
     event.preventDefault();
-    const zoomStep = 0.15;
+    const zoomStep = 0.02;
     const zoomFactor = event.deltaY < 0 ? (1 - zoomStep) : (1 + zoomStep);
     const vb = draw.viewbox();
     let newWidth = vb.width * zoomFactor;
