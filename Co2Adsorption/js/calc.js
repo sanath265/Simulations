@@ -13,8 +13,8 @@ function theta(args) {
   const t = args.t
 
   // These constants were chosen to achieve adsorption specified in OneNote.
-  const ka = 1.25e-4 || args.ka;
-  const kd = 100 * ka || args.kd;
+  const ka = 2.5e-4 || args.ka;
+  const kd = 3e-3 || args.kd;
   const cCO2 = args.cCO2;
 
   const p = ka * cCO2 + kd;
@@ -83,7 +83,7 @@ export function yCO2_out(args) {
   const nCO2 = n * y; // molar flow rate of CO2
   const nN2 = n * (1 - y); // molar flow rate of N2
 
-  const mZeolite = 0.0005; // mass of zeolite, kg
+  const mZeolite = 0.00018; // mass of zeolite, kg
   const nBinding = 6; // maximum adsorption capacity (6 mol / kg)
   const nMax = mZeolite * nBinding; // maximum number of moles of CO2 that can be adsorbed
 
