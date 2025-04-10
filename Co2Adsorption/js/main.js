@@ -1,4 +1,27 @@
 // Global Canvas Setup
+import { yCO2_out } from "./calc.js";
+
+// This is an example for how to use the yCO2_out function.
+// You can expect CO2 to start passing through after about 60 seconds
+// and total adsorption to be reached after about 6 minutes.
+(function example() {
+  const y = 0.1; // mole fraction CO2 = 10%
+  const P = 5; // pressure = 5 bar
+  const T = 298; // temperature = 298 K
+  const tStep = 0.1; // time step in seconds
+  const m = 0.001; // mass flow rate of gas in g / s
+
+  let t = 0;
+
+  setInterval(() => {
+    const outlet = yCO2_out({ t, tStep, m, P, T, yCO2: y });
+    t = Math.round((t + tStep) * 100) / 100;
+
+    if (t % 1 === 0) {
+      console.log(`At time ${t}s, the outlet mole fraction of CO2 is ${outlet.toFixed(4)}`);
+    }
+  }, 1000 * tStep);
+})();
 
 // Size to fit the window
 let windowWidth = window.innerWidth - 60;
