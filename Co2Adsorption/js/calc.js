@@ -12,11 +12,7 @@
 function theta(args) {
   const t = args.t
 
-  // These constants were chosen to achieve adsorption of 80% in a time
-  // of about 10 seconds at 10 bar and 298 K. This is unrealistic,
-  // but might be good for the digital lab. In real life, we would get
-  // closer to 99% binding in about the same time at 10 bar on a zeolite
-  // membrane.
+  // These constants were chosen to achieve adsorption specified in OneNote.
   const ka = 1.25e-4 || args.ka;
   const kd = 100 * ka || args.kd;
   const cCO2 = args.cCO2;
