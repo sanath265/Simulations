@@ -1,7 +1,24 @@
 // Global Canvas Setup
+
+// Size to fit the window
+let windowWidth = window.innerWidth - 60;
+let windowHeight = windowWidth * 600 / 1000;
+
+const draw = SVG().addTo('#svg-container').size(windowWidth, windowHeight);
+
 const canvasWidth = 1000;
 const canvasHeight = 600;
-const draw = SVG().addTo('#svg-container').size(canvasWidth, canvasHeight);
+
+// Change the viewport to 1000 x 600
+document.getElementsByTagName('svg')[0].setAttribute('viewBox', `0 0 ${canvasWidth} ${canvasHeight}`);
+
+// Resize the canvas width and height when the window is resized
+window.addEventListener('resize', function() {
+  let windowWidth = window.innerWidth - 60;
+  let windowHeight = windowWidth * 600 / 1000;
+  draw.size(windowWidth, windowHeight);
+});
+
 let pipeGroup = draw.group();
 
 // ----------------------------
@@ -67,10 +84,10 @@ const pipeOutlineColor = '#d5d5d5';
 // ----------------------------
 // NEW: Transmitter Dimensions
 // ----------------------------
-const transmitterBodyWidth = 80;      // Dark upper body width
-const transmitterBodyHeight = 60;     // Dark upper body height
-const transmitterScreenMargin = 5;    // Margin for the tan screen
-const transmitterScreenHeight = 25;   // Height of the tan screen
+const transmitterBodyWidth = 80; // Dark upper body width
+const transmitterBodyHeight = 60; // Dark upper body height
+const transmitterScreenMargin = 5; // Margin for the tan screen
+const transmitterScreenHeight = 25; // Height of the tan screen
 const transmitterBottomBlockHeight = 40; // Gray bottom block
 const transmitterConnectorWidth = 12; // Left/right connectors
 const transmitterConnectorHeight = 40;
@@ -101,7 +118,7 @@ function createNozzle(group, x, y) {
 
 function createGasCylinder(x, y, label) {
   const group = draw.group();
-  
+
   // Create gradient for cylinder body
   const cylinderGradient = draw.gradient('linear', function(add) {
     add.stop(0, '#a3a3a3');
@@ -109,7 +126,7 @@ function createGasCylinder(x, y, label) {
     add.stop(1, '#a3a3a3');
   });
   cylinderGradient.from(0, 0).to(1, 0);
-  
+
   group.path(`
     M ${x} ${y + 20}
     L ${x} ${y + mainCylHeight - 20}
@@ -122,37 +139,37 @@ function createGasCylinder(x, y, label) {
     Q ${x} ${y} ${x} ${y + 20}
     Z
   `)
-  .fill(cylinderGradient)
-  .stroke({ color: '#444', width: 1 });
-  
+    .fill(cylinderGradient)
+    .stroke({ color: '#444', width: 1 });
+
   // Add nozzle (centered horizontally)
   const nozzleX = x + (mainCylWidth - nozzleRect3Width) / 2;
   createNozzle(group, nozzleX, y - 12);
-  
+
   // Add vertical label on cylinder
   group.text(function(add) {
-    add.tspan(label).dx(x + mainCylWidth / 2).dy(y + mainCylHeight / 2);
-  })
-  .font({
-    family: 'Arial',
-    size: 20,
-    anchor: 'middle',
-    weight: 'bold'
-  })
-  .fill('white')
-  .transform({ rotate: -90, cx: x + mainCylWidth / 2, cy: y + mainCylHeight / 2 });
-  
+      add.tspan(label).dx(x + mainCylWidth / 2).dy(y + mainCylHeight / 2);
+    })
+    .font({
+      family: 'Arial',
+      size: 20,
+      anchor: 'middle',
+      weight: 'bold'
+    })
+    .fill('white')
+    .transform({ rotate: -90, cx: x + mainCylWidth / 2, cy: y + mainCylHeight / 2 });
+
   return group;
 }
 
 function createPressureGaugeView(x, y) {
   const group = draw.group();
-  
+
   group.circle(gaugeSize)
     .fill('white')
     .stroke({ color: '#888', width: gaugeStrokeWidth })
     .center(x, y);
-  
+
   const radius = (gaugeSize / 2) - gaugeStrokeWidth - 2;
   const startAngle = 220;
   const endAngle = -40;
@@ -163,11 +180,11 @@ function createPressureGaugeView(x, y) {
   const endX = x + radius * Math.cos(endRad);
   const endY = y + radius * Math.sin(endRad);
   const arcPath = `M ${startX} ${startY} A ${radius} ${radius} 0 1 0 ${endX} ${endY}`;
-  
+
   group.path(arcPath)
     .fill('none')
     .stroke({ color: 'black', width: 2 });
-  
+
   const needleLength = radius - 2;
   const needleWidth = 4;
   group.path(`M ${x} ${y} 
@@ -176,18 +193,18 @@ function createPressureGaugeView(x, y) {
               L ${x + needleWidth/2} ${y} Z`)
     .fill('black')
     .transform({ rotate: 45, cx: x, cy: y });
-  
+
   return group;
 }
 
 function createHexagonalView(x, y) {
   const group = draw.group();
-  
+
   group.circle(hexCircleSize)
     .fill('white')
     .stroke({ color: '#888', width: 4 })
     .center(x, y);
-  
+
   const height = hexSize * Math.sqrt(3);
   const hexagonPath = `
     M ${x - hexSize} ${y}
@@ -201,59 +218,59 @@ function createHexagonalView(x, y) {
   group.path(hexagonPath)
     .fill('black')
     .stroke({ color: 'black', width: 1 });
-  
+
   group.circle(hexInnerCircleSize)
     .fill('white')
     .center(x, y);
-  
+
   return group;
 }
 
 function createConnectedGauges(x, y) {
   const group = draw.group();
-  
+
   const leftGaugeX = x;
   const rightGaugeX = x + connectedGaugeSize;
   const hexagonX = x + connectedGaugeSize / 2;
   const hexagonY = y + connectedGaugeVerticalOffset;
-  
+
   createPressureGaugeView(leftGaugeX, y);
   createPressureGaugeView(rightGaugeX, y);
   createHexagonalView(hexagonX, hexagonY);
-  
+
   group.line(hexagonX, hexagonY, leftGaugeX, y)
     .stroke({ color: '#666', width: 4 });
   group.line(hexagonX, hexagonY, rightGaugeX, y)
     .stroke({ color: '#666', width: 4 });
-  
+
   return group;
 }
 
 function createValve(x, y) {
   const group = draw.group();
-  
+
   group.rect(valveBlockWidth, valveBlockHeight)
     .fill('#ccc')
     .stroke({ color: '#444', width: 1 })
     .move(x, y);
-  
+
   group.rect(valveBodyWidth, valveBodyHeight)
     .fill('#ddd')
     .stroke({ color: '#444', width: 1 })
     .radius(6)
     .move(x + valveBlockWidth, y);
-  
+
   group.rect(valveBlockWidth, valveBlockHeight)
     .fill('#ccc')
     .stroke({ color: '#444', width: 1 })
     .move(x + valveBlockWidth + valveBodyWidth, y);
-  
+
   const stemX = x + valveBlockWidth + (valveBodyWidth - valveStemWidth) / 2;
   const stemY = y - valveStemHeight;
   group.rect(valveStemWidth, valveStemHeight)
     .fill('#000')
     .move(stemX, stemY);
-  
+
   const bottomLeftX = stemX - (valveBottomWidth - valveStemWidth) / 2;
   const bottomRightX = bottomLeftX + valveBottomWidth;
   const topLeftX = bottomLeftX + (valveBottomWidth - valveTopWidth) / 2;
@@ -266,37 +283,37 @@ function createValve(x, y) {
     L ${bottomRightX} ${stemY}
     Z
   `)
-  .fill('#000')
-  .stroke({ color: '#444', width: 1 });
-  
+    .fill('#000')
+    .stroke({ color: '#444', width: 1 });
+
   return group;
 }
 
 function createVerticalValve(x, y) {
   const group = draw.group();
-  
+
   group.rect(verticalValveBlockWidth, verticalValveBlockHeight)
     .fill('#ccc')
     .stroke({ color: '#444', width: 1 })
     .move(x, y);
-  
+
   group.rect(verticalValveBodyWidth, verticalValveBodyHeight)
     .fill('#ddd')
     .stroke({ color: '#444', width: 1 })
     .radius(6)
     .move(x, y + verticalValveBlockHeight);
-  
+
   group.rect(verticalValveBlockWidth, verticalValveBlockHeight)
     .fill('#ccc')
     .stroke({ color: '#444', width: 1 })
     .move(x, y + verticalValveBlockHeight + verticalValveBodyHeight);
-  
+
   const stemX = x - verticalValveStemWidth;
   const stemY = y + verticalValveBlockHeight + (verticalValveBodyHeight - verticalValveStemHeight) / 2;
   group.rect(verticalValveStemWidth, verticalValveStemHeight)
     .fill('#000')
     .move(stemX, stemY);
-  
+
   const extra = (verticalValveTopExtent - verticalValveStemHeight) / 2;
   group.path(`
     M ${stemX} ${stemY} 
@@ -305,19 +322,19 @@ function createVerticalValve(x, y) {
     L ${stemX} ${stemY + verticalValveStemHeight} 
     Z
   `)
-  .fill('#000')
-  .stroke({ color: '#444', width: 1 });
-  
+    .fill('#000')
+    .stroke({ color: '#444', width: 1 });
+
   return group;
 }
 
 function createInteractiveValve(x, y, controller = true, isThreeValve = false) {
   const group = draw.group();
   const radius = interactiveValveRadius;
-  
+
   // Define initial entry positions (in degrees)
   let entryAngles = [0, 90, 180, 270];
-  
+
   // Draw markers for each entry.
   entryAngles.forEach(angle => {
     const rad = angle * Math.PI / 180;
@@ -334,7 +351,7 @@ function createInteractiveValve(x, y, controller = true, isThreeValve = false) {
       group.rect(10, 20).fill('black').center(markerX, markerY);
     }
   });
-  
+
   // Draw valve circle (outer and inner)
   group.circle(radius * 2)
     .fill('#b4b4ff')
@@ -344,7 +361,7 @@ function createInteractiveValve(x, y, controller = true, isThreeValve = false) {
     .fill('white')
     .stroke({ color: '#444', width: 2 })
     .center(x, y);
-  
+
   if (controller) {
     // Create pointer group.
     const pointerGroup = group.group();
@@ -353,10 +370,10 @@ function createInteractiveValve(x, y, controller = true, isThreeValve = false) {
       .fill('red')
       .stroke({ color: '#444', width: 1 });
     pointerGroup.center(x, y);
-  
+
     let currentAngleIndex = 0;
     pointerGroup.rotate(entryAngles[currentAngleIndex], x, y);
-  
+
     // Redefine allowed angles (example: [180, 90, 90])
     entryAngles = [180, 90, 90];
     group.on('click', function() {
@@ -365,7 +382,7 @@ function createInteractiveValve(x, y, controller = true, isThreeValve = false) {
       pointerGroup.animate(300).rotate(targetAngle, x, y);
     });
   }
-  
+
   return group;
 }
 
@@ -461,9 +478,9 @@ function createTValveFromImage(x, y) {
 
   // --- Label for Back Pressure Regulator ---
   group.text("Back Pressure Regulator")
-       .font({ family: 'Arial', size: 12, anchor: 'middle' })
-       .fill('#000')
-       .center(bodyX + bodyWidth / 2, bodyY + bodyHeight + 10);
+    .font({ family: 'Arial', size: 12, anchor: 'middle' })
+    .fill('#000')
+    .center(bodyX + bodyWidth / 2, bodyY + bodyHeight + 10);
 
   // --- Finally, position the entire group at (x, y) ---
   group.move(x, y);
@@ -473,79 +490,79 @@ function createTValveFromImage(x, y) {
 // Mass Flow Controller with Label
 function createMassFlowController(x, y) {
   const group = draw.group();
-  
+
   // Dimensions / Settings
   const topWidth = 60;
   const topHeight = 80;
   const topCornerRadius = 5;
-  
-  const screenMargin = 5; 
-  const screenHeight = 25; 
+
+  const screenMargin = 5;
+  const screenHeight = 25;
   const screenCornerRadius = 4;
-  
-  const buttonSize = 8;  
-  const buttonsYoffset = 10; 
-  
+
+  const buttonSize = 8;
+  const buttonsYoffset = 10;
+
   const rectWidth = 20;
   const rectHeight = 14;
-  
+
   const bottomHeight = 20;
 
   // Dark Gray Top Section
   group.rect(topWidth, topHeight)
-       .fill('#4a4a4a')
-       .stroke({ color: '#000', width: 1 })
-       .radius(topCornerRadius)
-       .move(x, y);
+    .fill('#4a4a4a')
+    .stroke({ color: '#000', width: 1 })
+    .radius(topCornerRadius)
+    .move(x, y);
 
   // Tan Screen
   group.rect(topWidth - screenMargin * 2, screenHeight)
-       .fill('#c69c6d')
-       .stroke({ color: '#000', width: 1 })
-       .radius(screenCornerRadius)
-       .move(x + screenMargin, y + screenMargin);
+    .fill('#c69c6d')
+    .stroke({ color: '#000', width: 1 })
+    .radius(screenCornerRadius)
+    .move(x + screenMargin, y + screenMargin);
 
   // Triangular Buttons and Black Rectangle
   const buttonsY = y + screenMargin + screenHeight + buttonsYoffset;
-  
+
   // Down Triangle
   group.path(`
     M ${x + 10} ${buttonsY} 
     L ${x + 5}  ${buttonsY - buttonSize} 
     L ${x + 15} ${buttonsY - buttonSize} Z
   `)
-  .fill('#00b7bd')
-  .stroke({ color: '#000', width: 1 });
-  
+    .fill('#00b7bd')
+    .stroke({ color: '#000', width: 1 });
+
   // Up Triangle
   group.path(`
     M ${x + 25} ${buttonsY - buttonSize} 
     L ${x + 20} ${buttonsY} 
     L ${x + 30} ${buttonsY} Z
   `)
-  .fill('#00b7bd')
-  .stroke({ color: '#000', width: 1 });
-  
+    .fill('#00b7bd')
+    .stroke({ color: '#000', width: 1 });
+
   // Black Rectangle
   const rectX = x + 35;
   const rectY = buttonsY - buttonSize;
   group.rect(rectWidth, rectHeight)
-       .fill('#000')
-       .stroke({ color: '#000', width: 1 })
-       .move(rectX, rectY);
+    .fill('#000')
+    .stroke({ color: '#000', width: 1 })
+    .move(rectX, rectY);
 
   // Bottom Light Gray Section
   group.rect(topWidth, bottomHeight)
-       .fill('#ccc')
-       .stroke({ color: '#444', width: 1 })
-       .move(x, y + topHeight);
-  
+    .fill('#ccc')
+    .stroke({ color: '#444', width: 1 })
+    .move(x, y + topHeight);
+
   // --- Label for Mass Flow Controller ---
   group.text("Mass Flow Controller")
-       .font({ family: 'Arial', size: 14, anchor: 'middle', weight: 'bold' })
-       .fill('#000')
-       .center(x + topWidth / 2, y + topHeight + bottomHeight + 15);
-       
+    .font({ family: 'Arial', size: 14, anchor: 'middle', weight: 'bold' })
+    .fill('#000')
+    .center(x + topWidth / 2, y + topHeight + bottomHeight + 15);
+
   return group;
 }
 
@@ -729,7 +746,7 @@ function drawPressureGaugesAboveTanks() {
   const gauge1X = mainCylWidth / 2 + margin;
   const gauge2X = mainCylWidth + tanksGap + mainCylWidth / 2 + margin;
   const gauge3X = 2 * (mainCylWidth + tanksGap) + mainCylWidth / 2 + margin;
-  
+
   createConnectedGauges(gauge1X, gaugeY);
   createConnectedGauges(gauge2X, gaugeY);
   createConnectedGauges(gauge3X, gaugeY);
@@ -738,24 +755,24 @@ function drawPressureGaugesAboveTanks() {
 function drawValvesOnGauges(gOffset = valveOnGaugesGaugeOffset) {
   const y = canvasHeight - mainCylHeight;
   const gaugeY = y - gOffset;
-  
+
   const gauge1X = tanksMarginX + mainCylWidth / 2;
   const gauge2X = tanksMarginX + mainCylWidth + tanksGap + mainCylWidth / 2;
   const gauge3X = tanksMarginX + 2 * (mainCylWidth + tanksGap) + mainCylWidth / 2;
-  
+
   const valveWidth = valveOnGaugesValveWidth;
   const valveTotalHeight = valveOnGaugesValveTotalHeight;
   const gapBetween = valveOnGaugesGapBetween;
-  
+
   const valve1X = gauge1X - valveWidth / 2;
   const valve1Y = gaugeY - gapBetween - valveTotalHeight;
-  
+
   const valve2X = gauge2X - valveWidth / 2;
   const valve2Y = gaugeY - gapBetween - valveTotalHeight;
-  
+
   const valve3X = gauge3X - valveWidth / 2;
   const valve3Y = gaugeY - gapBetween - valveTotalHeight;
-  
+
   createVerticalValve(valve1X, valve1Y);
   createVerticalValve(valve2X, valve2Y);
   createVerticalValve(valve3X, valve3Y);
@@ -814,13 +831,13 @@ function createVerticalAdsorptionBedView(x, y) {
 function createDigitalPressureGauge(x, y, pressure = "75 psi") {
   const group = draw.group();
   const gaugeSize = 50;
-  
+
   // Outer Circular Gauge
   group.circle(gaugeSize)
     .fill('#fff')
     .stroke({ color: '#888', width: gaugeStrokeWidth })
     .center(x, y);
-  
+
   // Digital Display Rectangle
   const displayWidth = gaugeSize * 0.8;
   const displayHeight = gaugeSize * 0.3;
@@ -830,13 +847,13 @@ function createDigitalPressureGauge(x, y, pressure = "75 psi") {
     .fill('#e0e0e0')
     .stroke({ color: '#444', width: 1 })
     .move(displayX, displayY);
-  
+
   // Pressure Text
   group.text(pressure)
     .font({ family: 'Arial', size: displayHeight * 0.5, anchor: 'middle', weight: 'bold' })
     .fill('#000')
     .center(x, y);
-  
+
   // Bottom Connector
   const connectorWidth = 10;
   const connectorHeight = 5;
@@ -846,7 +863,7 @@ function createDigitalPressureGauge(x, y, pressure = "75 psi") {
     .fill('#888')
     .stroke({ color: '#444', width: 1 })
     .move(connectorX, connectorY);
-  
+
   return group;
 }
 
@@ -857,7 +874,7 @@ function createCO2GasAnalyzer(x, y, concentration = "400 ppm") {
   const analyzerWidth = 120;
   const analyzerHeight = 80;
   const cornerRadius = 5;
-  
+
   // Main Analyzer Body
   group.rect(analyzerWidth, analyzerHeight)
     .fill('#f0f0f0')
@@ -871,7 +888,7 @@ function createCO2GasAnalyzer(x, y, concentration = "400 ppm") {
   const displayHeight = analyzerHeight * 0.5;
   const displayX = x + displayMargin;
   const displayY = y + displayMargin;
-  
+
   group.rect(displayWidth, displayHeight)
     .fill('#000')
     .stroke({ color: '#444', width: 1 })
@@ -907,52 +924,52 @@ function createCO2GasAnalyzer(x, y, concentration = "400 ppm") {
 // ----------------------------
 function createVentArrow(x, y, angle, length) {
   const rad = angle * Math.PI / 180;
-  
+
   // Arrow head parameters
   const arrowHeadLength = 10;
   const arrowHeadWidth = 8;
-  
+
   const shaftLength = length - arrowHeadLength;
   const shaftEndX = shaftLength * Math.cos(rad);
   const shaftEndY = shaftLength * Math.sin(rad);
-  
+
   const tipX = length * Math.cos(rad);
   const tipY = length * Math.sin(rad);
-  
+
   const baseX = shaftEndX;
   const baseY = shaftEndY;
-  
+
   const perpX = -Math.sin(rad);
   const perpY = Math.cos(rad);
   const halfWidth = arrowHeadWidth / 2;
-  
+
   const leftX = baseX + halfWidth * perpX;
   const leftY = baseY + halfWidth * perpY;
-  
+
   const rightX = baseX - halfWidth * perpX;
   const rightY = baseY - halfWidth * perpY;
-  
+
   const group = draw.group();
-  
+
   // Arrow Shaft
   group.line(0, 0, baseX, baseY)
     .stroke({ color: 'black', width: 2, linecap: 'round' });
-  
+
   // Arrowhead
   group.polygon(`${tipX},${tipY} ${leftX},${leftY} ${rightX},${rightY}`)
     .fill('black');
-  
+
   // "vent" Text beyond the arrow tip
   const textOffset = 12;
   const textX = tipX + textOffset * Math.cos(rad) - 10;
   const textY = tipY + textOffset * Math.sin(rad);
-  
+
   group.text("vent")
     .font({ family: 'Arial', size: 14, anchor: 'start' })
     .move(textX, textY);
-  
+
   group.move(x, y);
-  
+
   return group;
 }
 
@@ -966,7 +983,7 @@ function drawCanvas() {
   drawPressureGaugesAboveTanks();
   drawValvesOnGauges();
   drawInteractiveValveOnMiddleTank();
-  
+
   createMassFlowController(350, 0);
   createInteractiveValve(475, 87.5, false);
   createDigitalPressureGauge(550, 55, "100 psi");
