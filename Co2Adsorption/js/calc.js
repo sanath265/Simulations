@@ -11,10 +11,9 @@
  */
 function theta(args) {
   const t = args.t
-
-  // These constants were chosen to achieve adsorption specified in OneNote.
-  const ka = 2.5e-4 || args.ka;
-  const kd = 3e-3 || args.kd;
+    // These constants were chosen to achieve adsorption specified in OneNote.
+  const ka = args.ka || 9.120e-6;
+  const kd = args.kd || 4.365e-4;
   const cCO2 = args.cCO2;
 
   const p = ka * cCO2 + kd;
@@ -43,8 +42,8 @@ function theta(args) {
  * @returns {number} - The concentration of CO2 in mol/m^3.
  */
 function cCO2(args) {
-  const P = args.P;
-  const T = args.T;
+  const P = args.P ** 0.79; // adjusted to fit experimental data
+  const T = 250 + 532 * ((args.T - 273) / (348 - 273)); // adjusted to fit experimental data
   const yCO2 = args.yCO2;
 
   const PCO2 = P * yCO2; // partial pressure of CO2
@@ -62,29 +61,28 @@ function cCO2(args) {
  * @param {Object} args - The arguments object.
  * @param {number} args.t - The time in seconds.
  * @param {number} args.tStep - The time step in seconds.
- * @param {number} args.m - The mass flow rate of the gas mixture in g/s.
+ * @param {number} args.V - The volume of the gas mixture in m^3.
  * @param {number} args.P - The total pressure of the gas mixture in bar.
  * @param {number} args.T - The temperature of the gas mixture in K.
  * @param {number} args.yCO2 - The mole fraction of CO2 in the gas mixture.
  * @returns {number} - The outlet mole fraction of CO2 in the gas mixture.
  */
 export function yCO2_out(args) {
-  const t = args.t;
-  const tStep = args.tStep;
-  const m = args.m;
+  const t = args.t * 20;
+  const tStep = args.tStep * 20;
+  const V = args.V;
   const P = args.P;
   const T = args.T;
-  const y = args.yCO2;
+  const y = Math.min(args.yCO2, 0.99);
 
-  const MW_CO2 = 44.01; // g / mol
-  const MW_N2 = 28.02; // g / mol
+  const R = 0.08314; // L * bar / (K * mol)
+  const n = P * V / (R * T); // total number of moles in the gas mixture
 
-  const n = m / (y * MW_CO2 + (1 - y) * MW_N2); // total molar flow rate
   const nCO2 = n * y; // molar flow rate of CO2
   const nN2 = n * (1 - y); // molar flow rate of N2
 
-  const mZeolite = 0.00018; // mass of zeolite, kg
-  const nBinding = 6; // maximum adsorption capacity (6 mol / kg)
+  const mZeolite = 1.4; // mass of zeolite, kg
+  const nBinding = 12; // maximum adsorption capacity (12 mmol / g)
   const nMax = mZeolite * nBinding; // maximum number of moles of CO2 that can be adsorbed
 
   const C = cCO2({ P: P, T: T, yCO2: y }); // concentration of CO2 in mol / m^3
@@ -95,7 +93,99 @@ export function yCO2_out(args) {
 
   const amount_passed_through = Math.max(0, nCO2 * tStep - amount_adsorbed); // the amount of CO2 that did not adsorb in time tStep
 
-  const yOut = (amount_passed_through / tStep) / (amount_passed_through / tStep + nN2);
+  const yOut = (amount_passed_through / tStep) / (amount_passed_through / tStep + nN2) || 0;
 
   return yOut;
 }
+
+// (function testTheta() {
+//   const P = 5.0;
+//   const T = 273;
+//   const t = 1e9;
+//   const C = cCO2({
+//     P: P,
+//     T: T,
+//     yCO2: 1
+//   });
+
+//   const thTheor = theta({
+//     t: t,
+//     cCO2: C
+//   }) * 12;
+
+//   console.log({ P, T, thTheor });
+// })()
+
+// (function findKa_Kd() {
+//   const data = [
+//     [0.1, 273, 1.50],
+//     [0.1, 298, 1.20],
+//     [0.1, 323, 0.95],
+//     [0.1, 348, 0.75],
+//     [0.5, 273, 3.75],
+//     [0.5, 298, 3.00],
+//     [0.5, 323, 2.45],
+//     [0.5, 348, 2.00],
+//     [1.0, 273, 5.90],
+//     [1.0, 298, 4.80],
+//     [1.0, 323, 3.90],
+//     [1.0, 348, 3.10],
+//     [2.0, 273, 7.80],
+//     [2.0, 298, 6.50],
+//     [2.0, 323, 5.40],
+//     [2.0, 348, 4.50],
+//     [5.0, 273, 10.20],
+//     [5.0, 298, 8.50],
+//     [5.0, 323, 7.00],
+//     [5.0, 348, 5.90],
+//     [10.0, 273, 12.00],
+//     [10.0, 298, 10.10],
+//     [10.0, 323, 8.50],
+//     [10.0, 348, 7.20]
+//   ];
+//   const t = 1e5;
+
+//   let err = 1e9;
+//   let kaBest, kdBest;
+//   let iterations = 0;
+//   const kaStart = 1e-6;
+//   const kaEnd = 1e-3;
+//   const kaStep = Math.pow(kaEnd / kaStart, 1 / 1e2);
+//   const kdStart = 1e-4;
+//   const kdEnd = 1;
+//   const kdStep = Math.pow(kdEnd / kdStart, 1 / 1e2);
+//   for (let ka = kaStart; ka < kaEnd; ka *= kaStep) {
+//     for (let kd = kdStart; kd < kdEnd; kd *= kdStep) {
+//       let diff = 0;
+//       for (let i = 0; i < data.length; i++) {
+//         const P = data[i][0];
+//         const T = data[i][1];
+//         const thExp = data[i][2] / 12;
+
+//         const C = cCO2({
+//           P: P,
+//           T: T,
+//           yCO2: 1
+//         });
+
+//         const thTheor = theta({
+//           t: t,
+//           ka: ka,
+//           kd: kd,
+//           cCO2: C
+//         });
+//         const thDiff = Math.abs(thExp - thTheor);
+//         diff += thDiff;
+//         iterations++;
+//       }
+//       if (diff < err) {
+//         err = diff;
+//         kaBest = ka;
+//         kdBest = kd;
+//       }
+//     }
+//   }
+
+//   console.log(iterations);
+//   console.log(`Best ka: ${kaBest.toExponential(3)}, Best kd: ${kdBest.toExponential(3)}, Error: ${err}`);
+// })()
