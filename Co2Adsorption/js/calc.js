@@ -63,7 +63,7 @@ function cCO2(args) {
  * @param {Object} args - The arguments object.
  * @param {number} args.t - The time in seconds.
  * @param {number} args.tStep - The time step in seconds.
- * @param {number} args.V - The volumetric flow rate of the gas mixture in L / s.
+ * @param {number} args.m - The mass flow rate of the gas mixture in g / s.
  * @param {number} args.P - The total pressure of the gas mixture in bar.
  * @param {number} args.T - The temperature of the gas mixture in K.
  * @param {number} args.yCO2 - The mole fraction of CO2 in the gas mixture.
@@ -75,13 +75,20 @@ function cCO2(args) {
 export function yCO2_out(args) {
   // Time was multiplied by 20 to allow students to take measurements
   // within a reasonable time frame.
-  const timeMultiplicationFactor = 20;
+  const timeMultiplicationFactor = 10;
   let t = args.t * timeMultiplicationFactor;
   const tStep = args.tStep * timeMultiplicationFactor;
-  const V = args.V;
+  const m = args.m;
   const P = args.P;
   const T = args.T;
   const y = Math.min(args.yCO2, 0.99); // limit yCO2 to 0.99 to avoid division by zero
+  const MW_CO2 = 44.01; // g/mol
+  const MW_N2 = 28.02; // g/mol
+
+  const nTotal = m / (MW_CO2 * y + MW_N2 * (1 - y)); // total number of moles in the gas mixture
+  const nCO2 = nTotal * y; // molar flow rate of CO2
+  const nN2 = nTotal * (1 - y); // molar flow rate of N2
+
   const desorbing = args.desorbing || false;
   const timeOfDesorption = args.timeOfDesorption * timeMultiplicationFactor || 0;
   const kd = args.kd || 4.365e-4; // desorption rate constant in s^-1
@@ -91,12 +98,8 @@ export function yCO2_out(args) {
   }
 
   const R = 0.08314; // L * bar / (K * mol)
-  const n = P * V / (R * T); // total number of moles in the gas mixture
 
-  const nCO2 = n * y; // molar flow rate of CO2
-  const nN2 = n * (1 - y); // molar flow rate of N2
-
-  const mZeolite = 1.4; // mass of zeolite, kg - tuned for a 20x increase in time
+  const mZeolite = 0.005; // mass of zeolite, kg - tuned for a 20x increase in time
   const nBinding = 12; // maximum adsorption capacity (12 mmol / g)
   const nMax = mZeolite * nBinding; // maximum number of moles of CO2 that can be adsorbed
 
