@@ -5,7 +5,7 @@ import { yCO2_out } from "./calc.js";
 // You can expect CO2 to start passing through after about 60 seconds
 // and total adsorption to be reached after about 6 minutes.
 (function example() {
-  const y = 0.2; // mole fraction CO2 = 10%
+  const y = 0.2; // mole fraction CO2 = 20%
   const P = 0.5; // pressure = 0.5 bar
   const T = 298; // temperature = 298 K
   const tStep = 0.1; // time step in seconds. This can be any arbitrary value and d
