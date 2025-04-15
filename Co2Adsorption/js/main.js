@@ -7,22 +7,28 @@ import { yCO2_out } from "./calc.js";
 (function example() {
   const y = 0.5; // mole fraction CO2 = 50%
   const P = 5.0; // pressure = 5 bar
-  const T = 273; // temperature = 298 K
+  const T = 298; // temperature = 298 K
   const tStep = 0.1; // time step in seconds. This can be any arbitrary value and d
   const V = 0.05; // volumetric flow rate of gas in L / s
 
   let t = 0;
-  let timeSpeedMultiplier = 5;
+  let timeSpeedMultiplier = 8;
+  let desorbing = false; // when the CO2 is turned off and pure N2 is fed, change this to "true"
+  let timeOfDesorption = 0; // and set this to the time when CO2 is turned off
 
-  // setInterval(() => {
-  //   const outlet = yCO2_out({ t, tStep, V, P, T, yCO2: y });
-  //   t = Math.round((t + tStep) * 100) / 100;
+  setInterval(() => {
+    const outlet = yCO2_out({ t, tStep, V, P, T, yCO2: y, desorbing, timeOfDesorption });
+    t = Math.round((t + tStep) * 100) / 100;
 
-  //   // Students will take measurements every 5 seconds, so this is what the plot will look like
-  //   if (t % 5 === 0) {
-  //     console.log(`At time ${t}s, the outlet mole fraction of CO2 is ${outlet.toFixed(4)}`);
-  //   }
-  // }, 1000 * tStep / timeSpeedMultiplier);
+    if (t === 300) {
+      desorbing = true;
+      timeOfDesorption = t;
+    }
+    // Students will take measurements every 5 seconds, so this is what the plot will look like
+    if (t % 5 === 0) {
+      console.log(`At time ${t}s, the outlet mole fraction of CO2 is ${outlet.toFixed(4)}`);
+    }
+  }, 1000 * tStep / timeSpeedMultiplier);
 })();
 
 // Size to fit the window

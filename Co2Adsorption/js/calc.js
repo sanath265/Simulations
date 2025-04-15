@@ -67,18 +67,28 @@ function cCO2(args) {
  * @param {number} args.P - The total pressure of the gas mixture in bar.
  * @param {number} args.T - The temperature of the gas mixture in K.
  * @param {number} args.yCO2 - The mole fraction of CO2 in the gas mixture.
+ * @param {boolean} [args.desorbing=false] - Whether the CO2 is desorbing.
+ * @param {number} [args.timeOfDesorption=0] - The time of desorption in seconds.
+ * @param {number} [args.kd=4.365e-4] - The desorption rate constant in s^-1.
  * @returns {number} - The outlet mole fraction of CO2 in the gas mixture.
  */
 export function yCO2_out(args) {
   // Time was multiplied by 20 to allow students to take measurements
   // within a reasonable time frame.
   const timeMultiplicationFactor = 20;
-  const t = args.t * timeMultiplicationFactor;
+  let t = args.t * timeMultiplicationFactor;
   const tStep = args.tStep * timeMultiplicationFactor;
   const V = args.V;
   const P = args.P;
   const T = args.T;
   const y = Math.min(args.yCO2, 0.99); // limit yCO2 to 0.99 to avoid division by zero
+  const desorbing = args.desorbing || false;
+  const timeOfDesorption = args.timeOfDesorption * timeMultiplicationFactor || 0;
+  const kd = args.kd || 4.365e-4; // desorption rate constant in s^-1
+
+  if (desorbing) {
+    t = timeOfDesorption;
+  }
 
   const R = 0.08314; // L * bar / (K * mol)
   const n = P * V / (R * T); // total number of moles in the gas mixture
@@ -98,9 +108,17 @@ export function yCO2_out(args) {
 
   const amount_passed_through = Math.max(0, nCO2 * tStep - amount_adsorbed); // the amount of CO2 that did not adsorb in time tStep
 
-  const yOut = (amount_passed_through / tStep) / (amount_passed_through / tStep + nN2) || 0;
+  let yOut = (amount_passed_through / tStep) / (amount_passed_through / tStep + nN2) || 0;
 
-  return yOut;
+  if (!desorbing) {
+    return yOut;
+  } else {
+    const t = args.t * timeMultiplicationFactor;
+    const delta_t = t - timeOfDesorption;
+    const thetaDesorbed = Math.exp(-delta_t * kd); // amount of CO2 desorbed in time delta_t
+    yOut = yOut * thetaDesorbed;
+    return yOut;
+  }
 }
 
 /**
