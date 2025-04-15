@@ -1,4 +1,4 @@
-Pressure  Temperature Adsorbtion
+Pressure  Temperature Adsorption
 0.1       273         1.50
 0.1       298         1.20
 0.1       323         0.95
