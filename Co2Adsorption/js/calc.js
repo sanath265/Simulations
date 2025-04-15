@@ -63,7 +63,7 @@ function cCO2(args) {
  * @param {Object} args - The arguments object.
  * @param {number} args.t - The time in seconds.
  * @param {number} args.tStep - The time step in seconds.
- * @param {number} args.V - The volume of the gas mixture in m^3.
+ * @param {number} args.V - The volumetric flow rate of the gas mixture in L / s.
  * @param {number} args.P - The total pressure of the gas mixture in bar.
  * @param {number} args.T - The temperature of the gas mixture in K.
  * @param {number} args.yCO2 - The mole fraction of CO2 in the gas mixture.
