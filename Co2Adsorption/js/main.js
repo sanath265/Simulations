@@ -5,22 +5,24 @@ import { yCO2_out } from "./calc.js";
 // You can expect CO2 to start passing through after about 60 seconds
 // and total adsorption to be reached after about 6 minutes.
 (function example() {
-  const y = 1.0; // mole fraction CO2 = 10%
+  const y = 0.5; // mole fraction CO2 = 50%
   const P = 5.0; // pressure = 5 bar
   const T = 273; // temperature = 298 K
-  const tStep = 0.1; // time step in seconds
-  const V = 0.05; // mass flow rate of gas in L / s
+  const tStep = 0.1; // time step in seconds. This can be any arbitrary value and d
+  const V = 0.05; // volumetric flow rate of gas in L / s
 
   let t = 0;
+  let timeSpeedMultiplier = 5;
 
-  setInterval(() => {
-    const outlet = yCO2_out({ t, tStep, V, P, T, yCO2: y });
-    t = Math.round((t + tStep) * 100) / 100;
+  // setInterval(() => {
+  //   const outlet = yCO2_out({ t, tStep, V, P, T, yCO2: y });
+  //   t = Math.round((t + tStep) * 100) / 100;
 
-    if (t % 1 === 0) {
-      console.log(`At time ${t}s, the outlet mole fraction of CO2 is ${outlet.toFixed(4)}`);
-    }
-  }, 100 * tStep);
+  //   // Students will take measurements every 5 seconds, so this is what the plot will look like
+  //   if (t % 5 === 0) {
+  //     console.log(`At time ${t}s, the outlet mole fraction of CO2 is ${outlet.toFixed(4)}`);
+  //   }
+  // }, 1000 * tStep / timeSpeedMultiplier);
 })();
 
 // Size to fit the window
