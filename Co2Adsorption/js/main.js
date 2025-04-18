@@ -11,23 +11,23 @@ import { yCO2_out } from "./calc.js";
   const tStep = 0.1; // time step in seconds. This can be any arbitrary value and d
   const m_controller = 15.0; // mass flow rate in mg / min
   const m = m_controller * 1e-3 / 60; // mass flow rate in g / s
-
+  
   let t = 0;
   let timeSpeedMultiplier = 8;
   let desorbing = false; // when the CO2 is turned off and pure N2 is fed, change this to "true"
   let timeOfDesorption = 0; // and set this to the time when CO2 is turned off
-
+  
   setInterval(() => {
     const outlet = yCO2_out({ t, tStep, m, P, T, yCO2: y, desorbing, timeOfDesorption });
     t = Math.round((t + tStep) * 100) / 100;
-
+    
     if (t === 600) {
       desorbing = true;
       timeOfDesorption = t;
     }
     // Students will take measurements every 5 seconds, so this is what the plot will look like
     if (t % 5 === 0) {
-      console.log(`At time ${t}s, the outlet mole fraction of CO2 is ${outlet.toFixed(4)}`);
+      // console.log(`At time ${t}s, the outlet mole fraction of CO2 is ${outlet.toFixed(4)}`);
     }
   }, 100 * tStep / timeSpeedMultiplier);
 })();
@@ -52,6 +52,9 @@ window.addEventListener('resize', function() {
 });
 
 let pipeGroup = draw.group();
+
+// Add this near the top of the file with other global variables
+let mfcValue = 15.0; // Default MFC value in mg/min
 
 // ----------------------------
 // Existing Global Dimensions
@@ -127,7 +130,6 @@ const transmitterConnectorHeight = 40;
 // ----------------------------
 // Component Functions
 // ----------------------------
-
 function createNozzle(group, x, y) {
   // First rectangle
   group.rect(nozzleRect1Width, nozzleRect1Height)
@@ -180,8 +182,8 @@ function createGasCylinder(x, y, label) {
 
   // Add vertical label on cylinder
   group.text(function(add) {
-      add.tspan(label).dx(x + mainCylWidth / 2).dy(y + mainCylHeight / 2);
-    })
+    add.tspan(label).dx(x + mainCylWidth / 2).dy(y + mainCylHeight / 2);
+  })
     .font({
       family: 'Arial',
       size: 20,
@@ -220,9 +222,9 @@ function createPressureGaugeView(x, y) {
   const needleLength = radius - 2;
   const needleWidth = 4;
   group.path(`M ${x} ${y} 
-              L ${x - needleWidth/2} ${y} 
-              L ${x} ${y - needleLength}
-              L ${x + needleWidth/2} ${y} Z`)
+                L ${x - needleWidth/2} ${y} 
+                L ${x} ${y - needleLength}
+                L ${x + needleWidth/2} ${y} Z`)
     .fill('black')
     .transform({ rotate: 45, cx: x, cy: y });
 
@@ -258,17 +260,34 @@ function createHexagonalView(x, y) {
   return group;
 }
 
-function createConnectedGauges(x, y) {
-  const group = draw.group();
+// ----------------------------
+// UPDATED: createConnectedGauges with simpler click->screen coords
+// ----------------------------
+function createConnectedGauges(x, y, gaugeId) {
+  const group = draw.group().attr({ id: gaugeId });
 
   const leftGaugeX = x;
   const rightGaugeX = x + connectedGaugeSize;
   const hexagonX = x + connectedGaugeSize / 2;
   const hexagonY = y + connectedGaugeVerticalOffset;
 
-  createPressureGaugeView(leftGaugeX, y);
-  createPressureGaugeView(rightGaugeX, y);
-  createHexagonalView(hexagonX, hexagonY);
+  // Create gauges and store them in variables
+  const leftGauge = createPressureGaugeView(leftGaugeX, y);
+  const rightGauge = createPressureGaugeView(rightGaugeX, y);
+  const hexagon = createHexagonalView(hexagonX, hexagonY);
+
+  // Add click handlers to each component
+  const clickHandler = event => {
+    const screenX = event.clientX;
+    const screenY = event.clientY;
+    showGaugeInput(screenX, screenY, gaugeId);
+    console.log(`Gauge ${gaugeId} clicked at screen coords (${screenX}, ${screenY})`);
+  };
+
+  leftGauge.on('click', clickHandler);
+  rightGauge.on('click', clickHandler);
+  hexagon.on('click', clickHandler);
+  group.on('click', clickHandler);
 
   group.line(hexagonX, hexagonY, leftGaugeX, y)
     .stroke({ color: '#666', width: 4 });
@@ -278,48 +297,48 @@ function createConnectedGauges(x, y) {
   return group;
 }
 
-function createValve(x, y) {
-  const group = draw.group();
+// function createValve(x, y) {
+//   const group = draw.group();
 
-  group.rect(valveBlockWidth, valveBlockHeight)
-    .fill('#ccc')
-    .stroke({ color: '#444', width: 1 })
-    .move(x, y);
+//   group.rect(valveBlockWidth, valveBlockHeight)
+//     .fill('#ccc')
+//     .stroke({ color: '#444', width: 1 })
+//     .move(x, y);
 
-  group.rect(valveBodyWidth, valveBodyHeight)
-    .fill('#ddd')
-    .stroke({ color: '#444', width: 1 })
-    .radius(6)
-    .move(x + valveBlockWidth, y);
+//   group.rect(valveBodyWidth, valveBodyHeight)
+//     .fill('#ddd')
+//     .stroke({ color: '#444', width: 1 })
+//     .radius(6)
+//     .move(x + valveBlockWidth, y);
 
-  group.rect(valveBlockWidth, valveBlockHeight)
-    .fill('#ccc')
-    .stroke({ color: '#444', width: 1 })
-    .move(x + valveBlockWidth + valveBodyWidth, y);
+//   group.rect(valveBlockWidth, valveBlockHeight)
+//     .fill('#ccc')
+//     .stroke({ color: '#444', width: 1 })
+//     .move(x + valveBlockWidth + valveBodyWidth, y);
 
-  const stemX = x + valveBlockWidth + (valveBodyWidth - valveStemWidth) / 2;
-  const stemY = y - valveStemHeight;
-  group.rect(valveStemWidth, valveStemHeight)
-    .fill('#000')
-    .move(stemX, stemY);
+//   const stemX = x + valveBlockWidth + (valveBodyWidth - valveStemWidth) / 2;
+//   const stemY = y - valveStemHeight;
+//   group.rect(valveStemWidth, valveStemHeight)
+//     .fill('#000')
+//     .move(stemX, stemY);
 
-  const bottomLeftX = stemX - (valveBottomWidth - valveStemWidth) / 2;
-  const bottomRightX = bottomLeftX + valveBottomWidth;
-  const topLeftX = bottomLeftX + (valveBottomWidth - valveTopWidth) / 2;
-  const topRightX = topLeftX + valveTopWidth;
-  const topY = stemY - valveTrapezoidHeight;
-  group.path(`
-    M ${bottomLeftX} ${stemY}
-    L ${topLeftX} ${topY}
-    L ${topRightX} ${topY}
-    L ${bottomRightX} ${stemY}
-    Z
-  `)
-    .fill('#000')
-    .stroke({ color: '#444', width: 1 });
+//   const bottomLeftX = stemX - (valveBottomWidth - valveStemWidth) / 2;
+//   const bottomRightX = bottomLeftX + valveBottomWidth;
+//   const topLeftX = bottomLeftX + (valveBottomWidth - valveTopWidth) / 2;
+//   const topRightX = topLeftX + valveTopWidth;
+//   const topY = stemY - valveTrapezoidHeight;
+//   group.path(`
+//     M ${bottomLeftX} ${stemY}
+//     L ${topLeftX} ${topY}
+//     L ${topRightX} ${topY}
+//     L ${bottomRightX} ${stemY}
+//     Z
+//   `)
+//     .fill('#000')
+//     .stroke({ color: '#444', width: 1 });
 
-  return group;
-}
+//   return group;
+// }
 
 function createVerticalValve(x, y) {
   const group = draw.group();
@@ -418,10 +437,6 @@ function createInteractiveValve(x, y, controller = true, isThreeValve = false) {
   return group;
 }
 
-// ----------------------------
-// NEW: Components with Labels
-// ----------------------------
-
 // Back Pressure Regulator (T-Valve) with Label
 function createTValveFromImage(x, y) {
   const scale = 0.6;
@@ -519,7 +534,6 @@ function createTValveFromImage(x, y) {
   return group;
 }
 
-// Mass Flow Controller with Label
 function createMassFlowController(x, y) {
   const group = draw.group();
 
@@ -565,7 +579,7 @@ function createMassFlowController(x, y) {
   `)
     .fill('#00b7bd')
     .stroke({ color: '#000', width: 1 });
-
+    
   // Up Triangle
   group.path(`
     M ${x + 25} ${buttonsY - buttonSize} 
@@ -574,7 +588,7 @@ function createMassFlowController(x, y) {
   `)
     .fill('#00b7bd')
     .stroke({ color: '#000', width: 1 });
-
+    
   // Black Rectangle
   const rectX = x + 35;
   const rectY = buttonsY - buttonSize;
@@ -582,25 +596,150 @@ function createMassFlowController(x, y) {
     .fill('#000')
     .stroke({ color: '#000', width: 1 })
     .move(rectX, rectY);
-
+    
   // Bottom Light Gray Section
   group.rect(topWidth, bottomHeight)
     .fill('#ccc')
     .stroke({ color: '#444', width: 1 })
     .move(x, y + topHeight);
-
+    
   // --- Label for Mass Flow Controller ---
   group.text("Mass Flow Controller")
     .font({ family: 'Arial', size: 14, anchor: 'middle', weight: 'bold' })
     .fill('#000')
     .center(x + topWidth / 2, y + topHeight + bottomHeight + 15);
 
+  // Add click handler
+  group.on('click', () => {
+    showMFCZoomedView();
+  });
+    
   return group;
 }
 
-// ----------------------------
-// Pipe and Layout Functions
-// ----------------------------
+function showMFCZoomedView() {
+  // Remove any existing MFC view
+  document.querySelectorAll('.mfc-zoomed-view').forEach(el => el.remove());
+  document.querySelectorAll('.magnifying-glass').forEach(el => el.remove());
+
+  // Create magnifying glass
+  const magnifyingGlass = document.createElement('div');
+  magnifyingGlass.className = 'magnifying-glass';
+  document.body.appendChild(magnifyingGlass);
+
+  // Create container
+  const container = document.createElement('div');
+  container.className = 'mfc-zoomed-view';
+
+  // Create close button
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'close-btn';
+  closeBtn.innerHTML = '×';
+  closeBtn.onclick = () => {
+    container.remove();
+    magnifyingGlass.remove();
+  };
+
+  // Create display
+  const display = document.createElement('div');
+  display.className = 'mfc-display';
+  display.textContent = mfcValue.toFixed(1);
+
+  // Create controls container
+  const controls = document.createElement('div');
+  controls.className = 'mfc-controls';
+
+  // Create up triangle
+  const upTriangle = document.createElement('div');
+  upTriangle.className = 'triangle-btn triangle-up';
+  upTriangle.onclick = () => {
+    if (mfcValue < 100) {
+      mfcValue = Math.min(100, mfcValue + 1);
+      display.textContent = mfcValue.toFixed(1);
+      input.value = mfcValue.toFixed(1);
+      errorMsg.textContent = '';
+    }
+  };
+
+  // Create down triangle
+  const downTriangle = document.createElement('div');
+  downTriangle.className = 'triangle-btn triangle-down';
+  downTriangle.onclick = () => {
+    if (mfcValue > 1) {
+      mfcValue = Math.max(1, mfcValue - 1);
+      display.textContent = mfcValue.toFixed(1);
+      input.value = mfcValue.toFixed(1);
+      errorMsg.textContent = '';
+    }
+  };
+
+  // Create input container
+  const inputContainer = document.createElement('div');
+  inputContainer.className = 'input-container';
+
+  // Create input field
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = '1';
+  input.max = '100';
+  input.step = '0.1';
+  input.value = mfcValue.toFixed(1);
+
+  // Create error message
+  const errorMsg = document.createElement('div');
+  errorMsg.className = 'error-msg';
+  errorMsg.style.color = 'red';
+  errorMsg.style.marginTop = '5px';
+  errorMsg.style.textAlign = 'center';
+
+  // Create set button
+  const setButton = document.createElement('button');
+  setButton.textContent = 'Set';
+  setButton.onclick = () => {
+    const newValue = parseFloat(input.value);
+    if (isNaN(newValue)) {
+      errorMsg.textContent = 'Please enter a valid number';
+    } else if (newValue < 1 || newValue > 100) {
+      errorMsg.textContent = 'Value must be between 1 and 100 mg/min';
+    } else {
+      mfcValue = newValue;
+      display.textContent = mfcValue.toFixed(1);
+      errorMsg.textContent = '';
+    }
+  };
+
+  // Create unit label
+  const unitLabel = document.createElement('div');
+  unitLabel.className = 'unit-label';
+  unitLabel.textContent = 'mg/min';
+
+  // Assemble input container
+  inputContainer.append(input, setButton);
+
+  // Assemble controls
+  controls.append(upTriangle, inputContainer, downTriangle);
+
+  // Assemble container
+  container.append(closeBtn, display, controls, errorMsg, unitLabel);
+  document.body.appendChild(container);
+
+  // Position magnifying glass in the center of the view
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  magnifyingGlass.style.left = `${viewportWidth / 2}px`;
+  magnifyingGlass.style.top = `${viewportHeight / 2}px`;
+
+  // Close on outside click
+  const outside = e => {
+    if (!container.contains(e.target)) {
+      container.remove();
+      magnifyingGlass.remove();
+      document.removeEventListener('click', outside);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', outside), 0);
+}
+
 function drawPipeWithCurves(pathString, pipeW = pipeWidth, strokeC = pipeStrokeColor, outlineC = pipeOutlineColor) {
   let outline = draw.path(pathString)
     .fill('none')
@@ -629,26 +768,26 @@ function drawPipes() {
     L ${startX} ${startY - 17.5}
   `;
   drawPipeWithCurves(tank1PipePath1);
-
+  
   const tank1PipePath2 = `
     M ${startX} ${startY - 53}
     L ${startX} ${startY - 63}
   `;
   drawPipeWithCurves(tank1PipePath2);
-
+  
   const tank1PipePath3 = `
     M ${startX} ${startY - 92.5}
     L ${startX} ${startY - 130}
   `;
   drawPipeWithCurves(tank1PipePath3);
-
+  
   const tank1PipePath4 = `
     M ${startX} ${startY - 162.5}
     L ${startX} ${startY - 207.5}
     L ${startX + 100} ${startY - 207.5}
   `;
   drawPipeWithCurves(tank1PipePath4);
-
+  
   // Tank 2
   startX = 62.5 + mainCylWidth + tanksGap;
   startY = canvasHeight - mainCylHeight - 42.5;
@@ -657,25 +796,25 @@ function drawPipes() {
     L ${startX} ${startY - 17.5}
   `;
   drawPipeWithCurves(tank2PipePath1);
-
+  
   const tank2PipePath2 = `
     M ${startX} ${startY - 53}
     L ${startX} ${startY - 63}
   `;
   drawPipeWithCurves(tank2PipePath2);
-
+  
   const tank2PipePath3 = `
     M ${startX} ${startY - 92.5}
     L ${startX} ${startY - 130}
   `;
   drawPipeWithCurves(tank2PipePath3);
-
+  
   const tank2PipePath4 = `
     M ${startX} ${startY - 162.5}
     L ${startX} ${startY - 175}
   `;
   drawPipeWithCurves(tank2PipePath4);
-
+  
   // Tank 3
   startX = 62.5 + 2 * mainCylWidth + 2 * tanksGap;
   startY = canvasHeight - mainCylHeight - 42.5;
@@ -684,30 +823,30 @@ function drawPipes() {
     L ${startX} ${startY - 17.5}
   `;
   drawPipeWithCurves(tank3PipePath1);
-
+  
   const tank3PipePath2 = `
     M ${startX} ${startY - 53}
     L ${startX} ${startY - 63}
   `;
   drawPipeWithCurves(tank3PipePath2);
-
+  
   const tank3PipePath3 = `
     M ${startX} ${startY - 92.5}
     L ${startX} ${startY - 130}
   `;
   drawPipeWithCurves(tank3PipePath3);
-
+  
   const tank3PipePath4 = `
     M ${startX} ${startY - 162.5}
     L ${startX} ${startY - 207.5}
     L ${startX - 100} ${startY - 207.5}
   `;
   drawPipeWithCurves(tank3PipePath4);
-
+  
   // MFC Inlet and Outlet Paths and further connections (as per your design)
   startX = 62.5 + mainCylWidth + tanksGap;
   startY = canvasHeight - mainCylHeight - 42.5 - 240;
-
+  
   const MFCInletPath = `
     M ${startX} ${startY}
     L ${startX} ${startY - 10}
@@ -716,46 +855,46 @@ function drawPipes() {
     L ${startX + 187.5} ${startY + 20}
   `;
   drawPipeWithCurves(MFCInletPath);
-
+  
   const MFCOutletPath = `
     M ${startX + 187.5 + 60} ${startY + 20}
     L ${startX + 187.5 + 60 + 32.5} ${startY + 20}
   `;
   drawPipeWithCurves(MFCOutletPath);
-
+  
   const AdsorptionBedInletPath = `
     M ${startX + 187.5 + 60 + 32.5 + 65} ${startY + 20}
     L ${startX + 187.5 + 60 + 32.5 + 65 + 92.5} ${startY + 20}
     L ${startX + 187.5 + 60 + 32.5 + 65 + 92.5} ${startY + 20 + 62.5}
   `;
   drawPipeWithCurves(AdsorptionBedInletPath);
-
+  
   const MFCValveOutletPath = `
     M ${startX + 187.5 + 60 + 32.5 + 32.5} ${startY + 52.5}
     L ${startX + 187.5 + 60 + 32.5 + 32.5} ${startY + 332.5}
     L ${startX + 187.5 + 60 + 32.5 + 32.5 + 95} ${startY + 332.5}
   `;
   drawPipeWithCurves(MFCValveOutletPath);
-
+  
   const AdsorptionBedOutletPath = `
     M ${startX + 187.5 + 60 + 32.5 + 65 + 92.5} ${startY + 20 + 62.5 + 200}
     L ${startX + 187.5 + 60 + 32.5 + 65 + 92.5} ${startY + 20 + 62.5 + 200 + 17.5}
   `;
   drawPipeWithCurves(AdsorptionBedOutletPath);
-
+  
   const AdsorptionBedValveOutletPath = `
     M ${startX + 187.5 + 60 + 32.5 + 32.5 + 95 + 62.5} ${startY + 332.5}
     L ${startX + 187.5 + 60 + 32.5 + 32.5 + 95 + 62.5 + 17.5} ${startY + 332.5}
   `;
   drawPipeWithCurves(AdsorptionBedValveOutletPath);
-
+  
   const BPGValveOutletPath = `
     M ${startX + 187.5 + 60 + 32.5 + 32.5 + 95 + 62.5 + 95} ${startY + 332.5}
     L ${startX + 187.5 + 60 + 32.5 + 32.5 + 95 + 62.5 + 95 + 35} ${startY + 332.5}
     L ${startX + 187.5 + 60 + 32.5 + 32.5 + 95 + 62.5 + 95 + 35} ${startY + 332.5 + 50}
   `;
   drawPipeWithCurves(BPGValveOutletPath);
-
+  
   const AnalyserOutletPath = `
     M ${startX + 187.5 + 60 + 32.5 + 32.5 + 95 + 62.5 + 95 + 35 + 50} ${startY + 332.5 + 50 + 40}
     L ${startX + 187.5 + 60 + 32.5 + 32.5 + 95 + 62.5 + 95 + 35 + 50 + 50} ${startY + 332.5 + 50 + 40}
@@ -766,7 +905,7 @@ function drawPipes() {
 function drawThreeTanks() {
   const y = canvasHeight - mainCylHeight;
   const margin = 2.5;
-  createGasCylinder(tanksMarginX - margin, y, "CO2");
+  createGasCylinder(tanksMarginX - margin, y, "90% CO2 / N2");
   createGasCylinder(tanksMarginX + mainCylWidth + tanksGap - margin, y, "10% CO2 / N2");
   createGasCylinder(tanksMarginX + 2 * (mainCylWidth + tanksGap) - margin, y, "N2");
 }
@@ -778,36 +917,31 @@ function drawPressureGaugesAboveTanks() {
   const gauge1X = mainCylWidth / 2 + margin;
   const gauge2X = mainCylWidth + tanksGap + mainCylWidth / 2 + margin;
   const gauge3X = 2 * (mainCylWidth + tanksGap) + mainCylWidth / 2 + margin;
-
-  createConnectedGauges(gauge1X, gaugeY);
-  createConnectedGauges(gauge2X, gaugeY);
-  createConnectedGauges(gauge3X, gaugeY);
+  
+  createConnectedGauges(gauge1X, gaugeY, 'gauge1');
+  createConnectedGauges(gauge2X, gaugeY, 'gauge2');
+  createConnectedGauges(gauge3X, gaugeY, 'gauge3');
 }
 
 function drawValvesOnGauges(gOffset = valveOnGaugesGaugeOffset) {
   const y = canvasHeight - mainCylHeight;
   const gaugeY = y - gOffset;
-
+  
   const gauge1X = tanksMarginX + mainCylWidth / 2;
   const gauge2X = tanksMarginX + mainCylWidth + tanksGap + mainCylWidth / 2;
   const gauge3X = tanksMarginX + 2 * (mainCylWidth + tanksGap) + mainCylWidth / 2;
-
-  const valveWidth = valveOnGaugesValveWidth;
-  const valveTotalHeight = valveOnGaugesValveTotalHeight;
+  
+  const gaugeWidth = valveOnGaugesValveWidth;
+  const gaugeTotalHeight = valveOnGaugesValveTotalHeight;
   const gapBetween = valveOnGaugesGapBetween;
-
-  const valve1X = gauge1X - valveWidth / 2;
-  const valve1Y = gaugeY - gapBetween - valveTotalHeight;
-
-  const valve2X = gauge2X - valveWidth / 2;
-  const valve2Y = gaugeY - gapBetween - valveTotalHeight;
-
-  const valve3X = gauge3X - valveWidth / 2;
-  const valve3Y = gaugeY - gapBetween - valveTotalHeight;
-
-  createVerticalValve(valve1X, valve1Y);
-  createVerticalValve(valve2X, valve2Y);
-  createVerticalValve(valve3X, valve3Y);
+  
+  const gauge1Y = gaugeY - gapBetween - gaugeTotalHeight;
+  const gauge2Y = gaugeY - gapBetween - gaugeTotalHeight;
+  const gauge3Y = gaugeY - gapBetween - gaugeTotalHeight;
+  
+  createVerticalValve(gauge1X - gaugeWidth / 2, gauge1Y);
+  createVerticalValve(gauge2X - gaugeWidth / 2, gauge2Y);
+  createVerticalValve(gauge3X - gaugeWidth / 2, gauge3Y);
 }
 
 function drawInteractiveValveOnMiddleTank() {
@@ -818,17 +952,17 @@ function drawInteractiveValveOnMiddleTank() {
 
 function createVerticalAdsorptionBedView(x, y) {
   const group = draw.group();
-
+  
   // Define vertical bed dimensions
   const bedWidth = 104;
   const bedHeight = 200;
-
+  
   // Draw the main bed rectangle
   group.rect(bedWidth, bedHeight)
     .fill('#d0e7f9')
     .stroke({ color: '#444', width: 2 })
     .move(x, y);
-
+  
   // Create a pattern of small circles to mimic granular adsorbent
   const patternGroup = draw.group();
   const circleRadius = 3;
@@ -842,18 +976,18 @@ function createVerticalAdsorptionBedView(x, y) {
     }
   }
   group.add(patternGroup);
-
+  
   // Add centered labels for the adsorption bed
   group.text("Adsorption")
     .font({ family: 'Arial', size: 18, anchor: 'middle', weight: 'bold' })
     .fill('#000')
     .center(x + bedWidth / 2, y + bedHeight / 2);
-
+  
   group.text("Bed")
     .font({ family: 'Arial', size: 18, anchor: 'middle', weight: 'bold' })
     .fill('#000')
     .center(x + bedWidth / 2, y + bedHeight / 2 + 20);
-
+  
   return group;
 }
 
@@ -863,13 +997,13 @@ function createVerticalAdsorptionBedView(x, y) {
 function createDigitalPressureGauge(x, y, pressure = "75 psi") {
   const group = draw.group();
   const gaugeSize = 50;
-
+  
   // Outer Circular Gauge
   group.circle(gaugeSize)
     .fill('#fff')
     .stroke({ color: '#888', width: gaugeStrokeWidth })
     .center(x, y);
-
+  
   // Digital Display Rectangle
   const displayWidth = gaugeSize * 0.8;
   const displayHeight = gaugeSize * 0.3;
@@ -879,13 +1013,13 @@ function createDigitalPressureGauge(x, y, pressure = "75 psi") {
     .fill('#e0e0e0')
     .stroke({ color: '#444', width: 1 })
     .move(displayX, displayY);
-
+  
   // Pressure Text
   group.text(pressure)
     .font({ family: 'Arial', size: displayHeight * 0.5, anchor: 'middle', weight: 'bold' })
     .fill('#000')
     .center(x, y);
-
+  
   // Bottom Connector
   const connectorWidth = 10;
   const connectorHeight = 5;
@@ -895,49 +1029,49 @@ function createDigitalPressureGauge(x, y, pressure = "75 psi") {
     .fill('#888')
     .stroke({ color: '#444', width: 1 })
     .move(connectorX, connectorY);
-
+  
   return group;
 }
 
 function createCO2GasAnalyzer(x, y, concentration = "400 ppm") {
   const group = draw.group();
-
+  
   // Analyzer Body Dimensions
   const analyzerWidth = 120;
   const analyzerHeight = 80;
   const cornerRadius = 5;
-
+  
   // Main Analyzer Body
   group.rect(analyzerWidth, analyzerHeight)
     .fill('#f0f0f0')
     .stroke({ color: '#444', width: 2 })
     .radius(cornerRadius)
     .move(x, y);
-
+  
   // Digital Display Area
   const displayMargin = 10;
   const displayWidth = analyzerWidth - 2 * displayMargin;
   const displayHeight = analyzerHeight * 0.5;
   const displayX = x + displayMargin;
   const displayY = y + displayMargin;
-
+  
   group.rect(displayWidth, displayHeight)
     .fill('#000')
     .stroke({ color: '#444', width: 1 })
     .move(displayX, displayY);
-
+  
   // CO₂ Concentration Text
   group.text(concentration)
     .font({ family: 'Digital-7, monospace', size: 24, anchor: 'middle', weight: 'bold' })
     .fill('#0f0')
     .center(displayX + displayWidth / 2, displayY + displayHeight / 2);
-
+  
   // Label for the Analyzer
   group.text("CO₂ Analyzer")
     .font({ family: 'Arial', size: 12, anchor: 'middle', weight: 'bold' })
     .fill('#000')
     .center(x + analyzerWidth / 2, y + analyzerHeight - 15);
-
+  
   // Bottom Connector
   const connectorWidth = 20;
   const connectorHeight = 5;
@@ -947,61 +1081,58 @@ function createCO2GasAnalyzer(x, y, concentration = "400 ppm") {
     .fill('#888')
     .stroke({ color: '#444', width: 1 })
     .move(connectorX, connectorY);
-
+  
   return group;
 }
 
-// ----------------------------
-// New: Vent Arrow Function
-// ----------------------------
 function createVentArrow(x, y, angle, length) {
   const rad = angle * Math.PI / 180;
-
+  
   // Arrow head parameters
   const arrowHeadLength = 10;
   const arrowHeadWidth = 8;
-
+  
   const shaftLength = length - arrowHeadLength;
   const shaftEndX = shaftLength * Math.cos(rad);
   const shaftEndY = shaftLength * Math.sin(rad);
-
+  
   const tipX = length * Math.cos(rad);
   const tipY = length * Math.sin(rad);
-
+  
   const baseX = shaftEndX;
   const baseY = shaftEndY;
-
+  
   const perpX = -Math.sin(rad);
   const perpY = Math.cos(rad);
   const halfWidth = arrowHeadWidth / 2;
-
+  
   const leftX = baseX + halfWidth * perpX;
   const leftY = baseY + halfWidth * perpY;
-
+  
   const rightX = baseX - halfWidth * perpX;
   const rightY = baseY - halfWidth * perpY;
-
+  
   const group = draw.group();
-
+  
   // Arrow Shaft
   group.line(0, 0, baseX, baseY)
     .stroke({ color: 'black', width: 2, linecap: 'round' });
-
+  
   // Arrowhead
   group.polygon(`${tipX},${tipY} ${leftX},${leftY} ${rightX},${rightY}`)
     .fill('black');
-
+  
   // "vent" Text beyond the arrow tip
   const textOffset = 12;
   const textX = tipX + textOffset * Math.cos(rad) - 10;
   const textY = tipY + textOffset * Math.sin(rad);
-
+  
   group.text("vent")
     .font({ family: 'Arial', size: 14, anchor: 'start' })
     .move(textX, textY);
-
+  
   group.move(x, y);
-
+  
   return group;
 }
 
@@ -1015,7 +1146,7 @@ function drawCanvas() {
   drawPressureGaugesAboveTanks();
   drawValvesOnGauges();
   drawInteractiveValveOnMiddleTank();
-
+  
   createMassFlowController(350, 0);
   createInteractiveValve(475, 87.5, false);
   createDigitalPressureGauge(550, 55, "100 psi");
@@ -1027,4 +1158,78 @@ function drawCanvas() {
   createVentArrow(870, 485, 0, 40);
 }
 
+// store current pressures
+const gaugeValues = {};
+
+// ----------------------------
+// UPDATED: showGaugeInput with absolute positioning & styling
+// ----------------------------
+function showGaugeInput(screenX, screenY, gaugeId) {
+  // Remove any existing popup
+  document.querySelectorAll('.gauge-input-container').forEach(el => el.remove());
+
+  // Create container
+  const container = document.createElement('div');
+  container.className = 'gauge-input-container';
+  
+  // Position the popup to the right of the click point
+  Object.assign(container.style, {
+    position: 'fixed',
+    left: `${screenX + 20}px`, // Position to the right of the click point
+    top: `${screenY - 25}px`,  // Center vertically with the click point
+  });
+
+  // Create input row
+  const inputRow = document.createElement('div');
+  inputRow.className = 'input-row';
+
+  // Input field
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = '0.1';
+  input.max = '10';
+  input.step = '0.1';
+  input.value = gaugeValues[gaugeId] ?? '0.1';
+  input.style.width = '60px';
+
+  // Unit label
+  const unitLabel = document.createElement('span');
+  unitLabel.className = 'unit';
+  unitLabel.textContent = 'bar';
+
+  const button = document.createElement('button');
+  button.textContent = 'Set';
+
+  const errorMsg = document.createElement('div');
+  errorMsg.className = 'error';
+
+  // Assemble the input row
+  inputRow.append(input, unitLabel, button);
+  
+  // Assemble the container
+  container.append(inputRow, errorMsg);
+  document.body.appendChild(container);
+
+  button.addEventListener('click', () => {
+    const val = parseFloat(input.value);
+    if (isNaN(val) || val < 0.1 || val > 10) {
+      errorMsg.textContent = 'Enter a value between 0.1–10 bar';
+    } else {
+      gaugeValues[gaugeId] = val;
+      container.remove();
+      // TODO: update gauge visuals here
+    }
+  });
+
+  // Close on outside click
+  const outside = e => {
+    if (!container.contains(e.target)) {
+      container.remove();
+      document.removeEventListener('click', outside);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', outside), 0);
+}
+
+// Finally draw everything
 drawCanvas();
