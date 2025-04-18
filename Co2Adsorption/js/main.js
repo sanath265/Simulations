@@ -1,15 +1,21 @@
 // Global Canvas Setup
 import { yCO2_out } from "./calc.js";
 
+// Global state for tracking valve states
+const valveStates = {
+  // Will store valve states as: { valveId: { isOpen: boolean, position: {x, y} } }
+};
+
+// Add these global variables at the top
+let currentMultiValvePosition = 270; // Initial position
+let mfcFlowSpeed = 50; // Default flow speed in ms
+const flowPaths = {}; // Store flow animation paths for cleanup
+
 // This is an example for how to use the yCO2_out function.
 // You can expect CO2 to start passing through after about 60 seconds
 // and total adsorption to be reached after about 6 minutes.
-(function example() {
-  const y = 0.2; // mole fraction CO2 = 20%
-  const P = 0.5; // pressure = 0.5 bar
-  const T = 298; // temperature = 298 K
-  const tStep = 0.1; // time step in seconds. This can be any arbitrary value and d
-  const m_controller = 15.0; // mass flow rate in mg / min
+function calculateMoleFraction(y = 0.2, P = 0.5, m_controller = 15.0) {
+  const tStep = 0.1; // time step in seconds. This can be any arbitrary value and 
   const m = m_controller * 1e-3 / 60; // mass flow rate in g / s
   
   let t = 0;
@@ -30,7 +36,7 @@ import { yCO2_out } from "./calc.js";
       // console.log(`At time ${t}s, the outlet mole fraction of CO2 is ${outlet.toFixed(4)}`);
     }
   }, 100 * tStep / timeSpeedMultiplier);
-})();
+};
 
 // Size to fit the window
 let windowWidth = window.innerWidth - 60;
@@ -340,9 +346,16 @@ function createConnectedGauges(x, y, gaugeId) {
 //   return group;
 // }
 
-function createVerticalValve(x, y) {
+function createVerticalValve(x, y, valveId) {
   const group = draw.group();
+  
+  // Initialize valve state in global object
+  valveStates[valveId] = {
+    isOpen: false,
+    position: { x, y }
+  };
 
+  // Create valve body parts
   group.rect(verticalValveBlockWidth, verticalValveBlockHeight)
     .fill('#ccc')
     .stroke({ color: '#444', width: 1 })
@@ -366,7 +379,7 @@ function createVerticalValve(x, y) {
     .move(stemX, stemY);
 
   const extra = (verticalValveTopExtent - verticalValveStemHeight) / 2;
-  group.path(`
+  const knob = group.path(`
     M ${stemX} ${stemY} 
     L ${stemX - verticalValveTrapezoidWidth} ${stemY - extra} 
     L ${stemX - verticalValveTrapezoidWidth} ${stemY + verticalValveStemHeight + extra} 
@@ -376,6 +389,95 @@ function createVerticalValve(x, y) {
     .fill('#000')
     .stroke({ color: '#444', width: 1 });
 
+  // Add click handler to toggle valve state
+  group.on('click', function() {
+    valveStates[valveId].isOpen = !valveStates[valveId].isOpen;
+    const isOpen = valveStates[valveId].isOpen;
+
+    if (isOpen) {
+      knob.animate(300).fill('#ffa500'); // Red when open
+      
+      // Handle different valve types
+      if (valveId.startsWith('tankValve')) {
+        const tankNum = valveId.replace('tankValve', '');
+        const color = tankNum === '1' ? '#ff0000' : (tankNum === '2' ? '#ff0000' : 'blue');
+        const opacity = tankNum === '1' ? 0.9 : 0.5;
+        
+        // Check if multi-valve is pointing to this tank
+        const currentTank = getTankFromMultiValvePosition(currentMultiValvePosition);
+        if (currentTank === tankNum) {
+          // Start MFC flow immediately
+          checkAndStartMFCFlow();
+        }
+        
+        // Animate segments sequentially
+        animateGasFlow(`tank${tankNum}_seg2`, color, opacity, () => {
+          // Start seg3 after seg2 completes
+          animateGasFlow(`tank${tankNum}_seg3`, color, opacity, () => {
+            // Check if pressure valve is open to start seg4 after seg3 completes
+            const pressureValveId = `pressureValve${tankNum}`;
+            if (valveStates[pressureValveId] && valveStates[pressureValveId].isOpen) {
+              animateGasFlow(`tank${tankNum}_seg4`, color, opacity);
+            }
+          });
+        });
+      } else if (valveId.startsWith('pressureValve')) {
+        const tankNum = valveId.replace('pressureValve', '');
+        const tankValveId = `tankValve${tankNum}`;
+        
+        // Check if multi-valve is pointing to this tank
+        const currentTank = getTankFromMultiValvePosition(currentMultiValvePosition);
+        if (currentTank === tankNum) {
+          // Start MFC flow immediately
+          checkAndStartMFCFlow();
+        }
+        
+        // Only animate seg4 if corresponding tank valve is also open
+        if (valveStates[tankValveId] && valveStates[tankValveId].isOpen) {
+          const color = tankNum === '1' ? '#ff0000' : (tankNum === '2' ? '#ff0000' : 'blue');
+          const opacity = tankNum === '1' ? 0.9 : 0.5;
+          animateGasFlow(`tank${tankNum}_seg4`, color, opacity);
+        }
+      }
+    } else {
+      knob.animate(300).fill('#000000'); // Black when closed
+      
+      // Stop animations when valve closes
+      if (valveId.startsWith('tankValve')) {
+        const tankNum = valveId.replace('tankValve', '');
+        // Remove flow paths for segments 2, 3, and 4
+        ['seg2', 'seg3', 'seg4'].forEach(seg => {
+          const segmentId = `tank${tankNum}_${seg}`;
+          if (flowPaths && flowPaths[segmentId]) {
+            flowPaths[segmentId].remove();
+            delete flowPaths[segmentId];
+          }
+        });
+        
+        // Check if multi-valve is pointing to this tank
+        const currentTank = getTankFromMultiValvePosition(currentMultiValvePosition);
+        if (currentTank === tankNum) {
+          // Stop MFC flow
+          checkAndStartMFCFlow();
+        }
+      } else if (valveId.startsWith('pressureValve')) {
+        const tankNum = valveId.replace('pressureValve', '');
+        const segmentId = `tank${tankNum}_seg4`;
+        if (flowPaths && flowPaths[segmentId]) {
+          flowPaths[segmentId].remove();
+          delete flowPaths[segmentId];
+        }
+        
+        // Check if multi-valve is pointing to this tank
+        const currentTank = getTankFromMultiValvePosition(currentMultiValvePosition);
+        if (currentTank === tankNum) {
+          // Stop MFC flow
+          checkAndStartMFCFlow();
+        }
+      }
+    }
+  });
+
   return group;
 }
 
@@ -384,7 +486,7 @@ function createInteractiveValve(x, y, controller = true, isThreeValve = false) {
   const radius = interactiveValveRadius;
 
   // Define initial entry positions (in degrees)
-  let entryAngles = [0, 90, 180, 270];
+  const entryAngles = [270, 0, 90, 180]; // Tank positions: 1 at 180°, 2 at 90°, 3 at 0°
 
   // Draw markers for each entry.
   entryAngles.forEach(angle => {
@@ -418,23 +520,38 @@ function createInteractiveValve(x, y, controller = true, isThreeValve = false) {
     const pointerGroup = group.group();
     const pointerLength = radius - interactiveValvePointerOffset;
     pointerGroup.polygon(`${pointerLength},0 0,-5 0,5`)
-      .fill('red')
+      .fill('green')
       .stroke({ color: '#444', width: 1 });
     pointerGroup.center(x, y);
 
     let currentAngleIndex = 0;
     pointerGroup.rotate(entryAngles[currentAngleIndex], x, y);
 
-    // Redefine allowed angles (example: [180, 90, 90])
-    entryAngles = [180, 90, 90];
+    const entryAngles1 = [90, 90, 90, 90];
     group.on('click', function() {
       currentAngleIndex = (currentAngleIndex + 1) % entryAngles.length;
       const targetAngle = entryAngles[currentAngleIndex];
-      pointerGroup.animate(300).rotate(targetAngle, x, y);
+      currentMultiValvePosition = targetAngle;
+      pointerGroup.animate(300).rotate(entryAngles1[currentAngleIndex], x, y);
+      
+      // Check if we should start MFC flow for the new position
+      checkAndStartMFCFlow();
     });
   }
 
   return group;
+}
+
+function stopAllFlows() {
+  // Stop and remove all active flow animations
+  Object.keys(flowPaths).forEach(segmentId => {
+    if (flowPaths[segmentId]) {
+      // Remove the flow path from the SVG
+      flowPaths[segmentId].remove();
+      // Remove from our tracking object
+      delete flowPaths[segmentId];
+    }
+  });
 }
 
 // Back Pressure Regulator (T-Valve) with Label
@@ -703,6 +820,9 @@ function showMFCZoomedView() {
       errorMsg.textContent = 'Value must be between 1 and 100 mg/min';
     } else {
       mfcValue = newValue;
+      // Update flow speed based on MFC value (inverse relationship)
+      const newSpeed = Math.max(10, Math.min(100, 100 - (newValue / 2)));
+      updateMFCFlowSpeed(newSpeed);
       display.textContent = mfcValue.toFixed(1);
       errorMsg.textContent = '';
     }
@@ -740,24 +860,30 @@ function showMFCZoomedView() {
   setTimeout(() => document.addEventListener('click', outside), 0);
 }
 
-function drawPipeWithCurves(pathString, pipeW = pipeWidth, strokeC = pipeStrokeColor, outlineC = pipeOutlineColor) {
+const pipeSegments = {};
+
+// 2. Replace your old drawPipeWithCurves with this:
+function drawPipeWithCurves(pathString, segmentId, pipeW = pipeWidth, strokeC = pipeStrokeColor, outlineC = pipeOutlineColor) {
+  // draw the "shadow" outline
   let outline = draw.path(pathString)
     .fill('none')
-    .stroke({
-      color: outlineC,
-      width: pipeW + 4,
-      linejoin: 'round'
-    });
+    .stroke({ color: outlineC, width: pipeW + 4, linejoin: 'round' });
   pipeGroup.add(outline);
+
+  // draw the actual pipe
   let pipe = draw.path(pathString)
     .fill('none')
-    .stroke({
-      color: strokeC,
-      width: pipeW,
-      linejoin: 'round'
-    });
+    .stroke({ color: strokeC, width: pipeW, linejoin: 'round' });
   pipeGroup.add(pipe);
+
+  // register it so we can animate later
+  if (segmentId) {
+    pipeSegments[segmentId] = pipe;
+  }
+
+  return pipe;
 }
+
 
 function drawPipes() {
   // Example pipe path for Tank 1
@@ -767,26 +893,27 @@ function drawPipes() {
     M ${startX} ${startY} 
     L ${startX} ${startY - 17.5}
   `;
-  drawPipeWithCurves(tank1PipePath1);
+  drawPipeWithCurves(tank1PipePath1, 'tank1_seg1', pipeWidth, '#ff0000', pipeOutlineColor)
+    .stroke({ opacity: 0.9 });
   
   const tank1PipePath2 = `
     M ${startX} ${startY - 53}
     L ${startX} ${startY - 63}
   `;
-  drawPipeWithCurves(tank1PipePath2);
+  drawPipeWithCurves(tank1PipePath2, 'tank1_seg2');
   
   const tank1PipePath3 = `
     M ${startX} ${startY - 92.5}
     L ${startX} ${startY - 130}
   `;
-  drawPipeWithCurves(tank1PipePath3);
+  drawPipeWithCurves(tank1PipePath3, 'tank1_seg3');
   
   const tank1PipePath4 = `
     M ${startX} ${startY - 162.5}
     L ${startX} ${startY - 207.5}
     L ${startX + 100} ${startY - 207.5}
   `;
-  drawPipeWithCurves(tank1PipePath4);
+  drawPipeWithCurves(tank1PipePath4, 'tank1_seg4');
   
   // Tank 2
   startX = 62.5 + mainCylWidth + tanksGap;
@@ -795,25 +922,25 @@ function drawPipes() {
     M ${startX} ${startY} 
     L ${startX} ${startY - 17.5}
   `;
-  drawPipeWithCurves(tank2PipePath1);
+  drawPipeWithCurves(tank2PipePath1, 'tank2_seg1', pipeWidth, '#ff0000', pipeOutlineColor).stroke({ opacity: 0.5 });;
   
   const tank2PipePath2 = `
     M ${startX} ${startY - 53}
     L ${startX} ${startY - 63}
   `;
-  drawPipeWithCurves(tank2PipePath2);
+  drawPipeWithCurves(tank2PipePath2, 'tank2_seg2');
   
   const tank2PipePath3 = `
     M ${startX} ${startY - 92.5}
     L ${startX} ${startY - 130}
   `;
-  drawPipeWithCurves(tank2PipePath3);
+  drawPipeWithCurves(tank2PipePath3, 'tank2_seg3');
   
   const tank2PipePath4 = `
     M ${startX} ${startY - 162.5}
     L ${startX} ${startY - 175}
   `;
-  drawPipeWithCurves(tank2PipePath4);
+  drawPipeWithCurves(tank2PipePath4, 'tank2_seg4');
   
   // Tank 3
   startX = 62.5 + 2 * mainCylWidth + 2 * tanksGap;
@@ -822,26 +949,26 @@ function drawPipes() {
     M ${startX} ${startY} 
     L ${startX} ${startY - 17.5}
   `;
-  drawPipeWithCurves(tank3PipePath1);
+  drawPipeWithCurves(tank3PipePath1, 'tank3_seg1', pipeWidth, 'blue', pipeOutlineColor).stroke({ opacity: 0.5 });;;
   
   const tank3PipePath2 = `
     M ${startX} ${startY - 53}
     L ${startX} ${startY - 63}
   `;
-  drawPipeWithCurves(tank3PipePath2);
+  drawPipeWithCurves(tank3PipePath2, 'tank3_seg2');
   
   const tank3PipePath3 = `
     M ${startX} ${startY - 92.5}
     L ${startX} ${startY - 130}
   `;
-  drawPipeWithCurves(tank3PipePath3);
+  drawPipeWithCurves(tank3PipePath3, 'tank3_seg3');
   
   const tank3PipePath4 = `
     M ${startX} ${startY - 162.5}
     L ${startX} ${startY - 207.5}
     L ${startX - 100} ${startY - 207.5}
   `;
-  drawPipeWithCurves(tank3PipePath4);
+  drawPipeWithCurves(tank3PipePath4, 'tank3_seg4');
   
   // MFC Inlet and Outlet Paths and further connections (as per your design)
   startX = 62.5 + mainCylWidth + tanksGap;
@@ -854,52 +981,98 @@ function drawPipes() {
     L ${startX + 150} ${startY + 20}
     L ${startX + 187.5} ${startY + 20}
   `;
-  drawPipeWithCurves(MFCInletPath);
+  drawPipeWithCurves(MFCInletPath, 'mfc_inlet');
   
   const MFCOutletPath = `
     M ${startX + 187.5 + 60} ${startY + 20}
     L ${startX + 187.5 + 60 + 32.5} ${startY + 20}
   `;
-  drawPipeWithCurves(MFCOutletPath);
+  drawPipeWithCurves(MFCOutletPath, 'mfc_outlet');
   
   const AdsorptionBedInletPath = `
     M ${startX + 187.5 + 60 + 32.5 + 65} ${startY + 20}
     L ${startX + 187.5 + 60 + 32.5 + 65 + 92.5} ${startY + 20}
     L ${startX + 187.5 + 60 + 32.5 + 65 + 92.5} ${startY + 20 + 62.5}
   `;
-  drawPipeWithCurves(AdsorptionBedInletPath);
+  drawPipeWithCurves(AdsorptionBedInletPath, 'adsorption_bed_inlet');
   
   const MFCValveOutletPath = `
     M ${startX + 187.5 + 60 + 32.5 + 32.5} ${startY + 52.5}
     L ${startX + 187.5 + 60 + 32.5 + 32.5} ${startY + 332.5}
     L ${startX + 187.5 + 60 + 32.5 + 32.5 + 95} ${startY + 332.5}
   `;
-  drawPipeWithCurves(MFCValveOutletPath);
+  drawPipeWithCurves(MFCValveOutletPath, 'mfc_valve_outlet');
   
   const AdsorptionBedOutletPath = `
     M ${startX + 187.5 + 60 + 32.5 + 65 + 92.5} ${startY + 20 + 62.5 + 200}
     L ${startX + 187.5 + 60 + 32.5 + 65 + 92.5} ${startY + 20 + 62.5 + 200 + 17.5}
   `;
-  drawPipeWithCurves(AdsorptionBedOutletPath);
+  drawPipeWithCurves(AdsorptionBedOutletPath, 'adsorption_bed_outlet');
   
   const AdsorptionBedValveOutletPath = `
     M ${startX + 187.5 + 60 + 32.5 + 32.5 + 95 + 62.5} ${startY + 332.5}
     L ${startX + 187.5 + 60 + 32.5 + 32.5 + 95 + 62.5 + 17.5} ${startY + 332.5}
   `;
-  drawPipeWithCurves(AdsorptionBedValveOutletPath);
+  drawPipeWithCurves(AdsorptionBedValveOutletPath, 'adsorption_bed_valve_outlet');
   
   const BPGValveOutletPath = `
     M ${startX + 187.5 + 60 + 32.5 + 32.5 + 95 + 62.5 + 95} ${startY + 332.5}
     L ${startX + 187.5 + 60 + 32.5 + 32.5 + 95 + 62.5 + 95 + 35} ${startY + 332.5}
     L ${startX + 187.5 + 60 + 32.5 + 32.5 + 95 + 62.5 + 95 + 35} ${startY + 332.5 + 50}
   `;
-  drawPipeWithCurves(BPGValveOutletPath);
+  drawPipeWithCurves(BPGValveOutletPath, 'bpg_valve_outlet');
   
   const AnalyserOutletPath = `
     M ${startX + 187.5 + 60 + 32.5 + 32.5 + 95 + 62.5 + 95 + 35 + 50} ${startY + 332.5 + 50 + 40}
     L ${startX + 187.5 + 60 + 32.5 + 32.5 + 95 + 62.5 + 95 + 35 + 50 + 50} ${startY + 332.5 + 50 + 40}
   `;
-  drawPipeWithCurves(AnalyserOutletPath);
+  drawPipeWithCurves(AnalyserOutletPath, 'analyser_outlet');
+}
+
+function animateGasFlow(segmentId, color, opacity, onComplete = null, isMFCControlled = false) {
+  const path = pipeSegments[segmentId];
+  if (!path) return;
+
+  // Get the path string from the existing segment
+  const pathString = path.node.getAttribute('d');
+  
+  // Create a new path for the flow animation
+  const flowPath = draw.path(pathString)
+    .fill('none')
+    .stroke({
+      color: color,
+      opacity: opacity,
+      width: pipeWidth,
+      linejoin: 'round'
+    });
+  
+  // Add to pipe group
+  pipeGroup.add(flowPath);
+  
+  // Get total length for animation
+  const totalLength = flowPath.node.getTotalLength();
+  
+  // Set initial dash array and offset
+  flowPath.attr({
+    'stroke-dasharray': totalLength,
+    'stroke-dashoffset': totalLength
+  });
+  
+  // Store MFC control flag and color/opacity
+  flowPath.isMFCControlled = isMFCControlled;
+  flowPath.color = color;
+  flowPath.opacity = opacity;
+  
+  // Animate the flow with completion callback
+  const speed = isMFCControlled ? mfcFlowSpeed : 50;
+  flowPath.animate(speed).attr({ 'stroke-dashoffset': 0 }).after(() => {
+    if (onComplete) {
+      onComplete();
+    }
+  });
+  
+  // Store the flow path for later removal
+  flowPaths[segmentId] = flowPath;
 }
 
 function drawThreeTanks() {
@@ -923,7 +1096,7 @@ function drawPressureGaugesAboveTanks() {
   createConnectedGauges(gauge3X, gaugeY, 'gauge3');
 }
 
-function drawValvesOnGauges(gOffset = valveOnGaugesGaugeOffset) {
+function drawValvesOnGauges(gOffset = valveOnGaugesGaugeOffset, valvePrefix = 'valve') {
   const y = canvasHeight - mainCylHeight;
   const gaugeY = y - gOffset;
   
@@ -939,9 +1112,9 @@ function drawValvesOnGauges(gOffset = valveOnGaugesGaugeOffset) {
   const gauge2Y = gaugeY - gapBetween - gaugeTotalHeight;
   const gauge3Y = gaugeY - gapBetween - gaugeTotalHeight;
   
-  createVerticalValve(gauge1X - gaugeWidth / 2, gauge1Y);
-  createVerticalValve(gauge2X - gaugeWidth / 2, gauge2Y);
-  createVerticalValve(gauge3X - gaugeWidth / 2, gauge3Y);
+  createVerticalValve(gauge1X - gaugeWidth / 2, gauge1Y, `${valvePrefix}1`);
+  createVerticalValve(gauge2X - gaugeWidth / 2, gauge2Y, `${valvePrefix}2`);
+  createVerticalValve(gauge3X - gaugeWidth / 2, gauge3Y, `${valvePrefix}3`);
 }
 
 function drawInteractiveValveOnMiddleTank() {
@@ -1142,9 +1315,9 @@ function createVentArrow(x, y, angle, length) {
 function drawCanvas() {
   drawPipes();
   drawThreeTanks();
-  drawValvesOnGauges(25);
+  drawValvesOnGauges(25, 'tankValve');
   drawPressureGaugesAboveTanks();
-  drawValvesOnGauges();
+  drawValvesOnGauges(undefined, 'pressureValve');
   drawInteractiveValveOnMiddleTank();
   
   createMassFlowController(350, 0);
@@ -1229,6 +1402,114 @@ function showGaugeInput(screenX, screenY, gaugeId) {
     }
   };
   setTimeout(() => document.addEventListener('click', outside), 0);
+}
+
+function updateMFCFlowSpeed(value) {
+  mfcFlowSpeed = value;
+  // Update any active flows
+  Object.values(flowPaths).forEach(path => {
+    if (path.isMFCControlled) {
+      // Remove the old path
+      path.remove();
+      // Create a new path with updated speed
+      const segmentId = Object.keys(flowPaths).find(key => flowPaths[key] === path);
+      if (segmentId) {
+        animateGasFlow(segmentId, path.color, path.opacity, null, true);
+      }
+    }
+  });
+}
+
+function getTankFromMultiValvePosition(position) {
+  switch(position) {
+    case 180: return '1';  // Tank 1 at 180 degrees
+    case 90: return '2';   // Tank 2 at 90 degrees
+    case 0: return '3';    // Tank 3 at 0 degrees
+    default: return null;  // No tank selected
+  }
+}
+
+function checkAndStartMFCFlow() {
+  // Check if multi-valve is pointing to a tank and both its valves are open
+  const tankNum = getTankFromMultiValvePosition(currentMultiValvePosition);
+  if (tankNum) {
+    const tankValveId = `tankValve${tankNum}`;
+    const pressureValveId = `pressureValve${tankNum}`;
+    
+    // Only start flow if both valves are open
+    if (valveStates[tankValveId]?.isOpen && valveStates[pressureValveId]?.isOpen) {
+      // Set color and opacity based on tank number
+      let color, opacity;
+      switch(tankNum) {
+        case '1':
+          color = '#ff0000';  // Red for tank 1
+          opacity = 0.9;      // 0.9 opacity for tank 1
+          break;
+        case '2':
+          color = '#ff0000';  // Red for tank 2
+          opacity = 0.5;      // 0.5 opacity for tank 2
+          break;
+        case '3':
+          color = 'blue';     // Blue for tank 3
+          opacity = 0.5;      // 0.5 opacity for tank 3
+          break;
+      }
+      
+      // Stop only MFC-related flows
+      const mfcSegments = ['mfc_inlet', 'mfc_outlet', 'adsorption_bed_inlet', 
+                          'mfc_valve_outlet', 'adsorption_bed_outlet', 
+                          'adsorption_bed_valve_outlet', 'bpg_valve_outlet', 
+                          'analyser_outlet'];
+      mfcSegments.forEach(segmentId => {
+        if (flowPaths[segmentId]) {
+          flowPaths[segmentId].remove();
+          delete flowPaths[segmentId];
+        }
+      });
+      
+      // Start MFC inlet path
+      animateGasFlow('mfc_inlet', color, opacity, () => {
+        // After MFC inlet completes, start MFC outlet and other paths
+        animateGasFlow('mfc_outlet', color, opacity, null, true);
+        
+        // Start these paths simultaneously
+        animateGasFlow('adsorption_bed_inlet', color, opacity, null, true);
+        animateGasFlow('mfc_valve_outlet', color, opacity, () => {
+          // After MFC valve outlet completes, start adsorption bed outlet
+          animateGasFlow('adsorption_bed_outlet', color, opacity, () => {
+            // After adsorption bed outlet completes, start remaining paths
+            animateGasFlow('adsorption_bed_valve_outlet', color, opacity, null, true);
+            animateGasFlow('bpg_valve_outlet', color, opacity, null, true);
+            animateGasFlow('analyser_outlet', color, opacity, null, true);
+          }, true);
+        }, true);
+      });
+    } else {
+      // If either valve is closed, stop only MFC-related flows
+      const mfcSegments = ['mfc_inlet', 'mfc_outlet', 'adsorption_bed_inlet', 
+                          'mfc_valve_outlet', 'adsorption_bed_outlet', 
+                          'adsorption_bed_valve_outlet', 'bpg_valve_outlet', 
+                          'analyser_outlet'];
+      mfcSegments.forEach(segmentId => {
+        if (flowPaths[segmentId]) {
+          flowPaths[segmentId].remove();
+          delete flowPaths[segmentId];
+        }
+      });
+    }
+  } else {
+    // If no tank is selected, stop only MFC-related flows
+    const mfcSegments = ['mfc_inlet', 'mfc_outlet', 'adsorption_bed_inlet', 
+                        'mfc_valve_outlet', 'adsorption_bed_outlet', 
+                        'adsorption_bed_valve_outlet', 'bpg_valve_outlet', 
+                        'analyser_outlet'];
+    mfcSegments.forEach(segmentId => {
+      if (flowPaths[segmentId]) {
+        flowPaths[segmentId].remove();
+        delete flowPaths[segmentId];
+      }
+    });
+  }
 }
 
 // Finally draw everything
