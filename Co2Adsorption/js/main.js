@@ -30,17 +30,17 @@ let heatingInterval = null;
   
   let t = 0;
   let timeSpeedMultiplier = 8;
-  let desorbing = false; // when the CO2 is turned off and pure N2 is fed, change this to "true"
+  let desorbing = true; // when the CO2 is turned off and pure N2 is fed, change this to "true"
   let timeOfDesorption = 0; // and set this to the time when CO2 is turned off
   
   setInterval(() => {
     const outlet = yCO2_out({ t, tStep, m, P, T, yCO2: y, desorbing, timeOfDesorption });
     t = Math.round((t + tStep) * 100) / 100;
     
-    if (t === 60) {
-      desorbing = true;
-      timeOfDesorption = t;
-    }
+    // if (t === 60) {
+    //   desorbing = true;
+    //   timeOfDesorption = t;
+    // }
     // Students will take measurements every 5 seconds, so this is what the plot will look like
     if (t % 5 === 0) {
       // console.log(`At time ${t}s, the outlet mole fraction of CO2 is ${outlet.toFixed(4)}`);
@@ -144,6 +144,7 @@ const transmitterConnectorWidth = 12; // Left/right connectors
 const transmitterConnectorHeight = 40;
 let prevTankNum = null;
 let timeWhenAdsorptionStopped = null;
+let interactiveValveKnob = null;
 // ----------------------------
 // Component Functions
 // ----------------------------
@@ -314,49 +315,6 @@ function createGasCylinder(x, y, label) {
       return group;
     }
     
-    // function createValve(x, y) {
-    //   const group = draw.group();
-    
-    //   group.rect(valveBlockWidth, valveBlockHeight)
-    //     .fill('#ccc')
-    //     .stroke({ color: '#444', width: 1 })
-    //     .move(x, y);
-    
-    //   group.rect(valveBodyWidth, valveBodyHeight)
-    //     .fill('#ddd')
-    //     .stroke({ color: '#444', width: 1 })
-    //     .radius(6)
-    //     .move(x + valveBlockWidth, y);
-    
-    //   group.rect(valveBlockWidth, valveBlockHeight)
-    //     .fill('#ccc')
-    //     .stroke({ color: '#444', width: 1 })
-    //     .move(x + valveBlockWidth + valveBodyWidth, y);
-    
-    //   const stemX = x + valveBlockWidth + (valveBodyWidth - valveStemWidth) / 2;
-    //   const stemY = y - valveStemHeight;
-    //   group.rect(valveStemWidth, valveStemHeight)
-    //     .fill('#000')
-    //     .move(stemX, stemY);
-    
-    //   const bottomLeftX = stemX - (valveBottomWidth - valveStemWidth) / 2;
-    //   const bottomRightX = bottomLeftX + valveBottomWidth;
-    //   const topLeftX = bottomLeftX + (valveBottomWidth - valveTopWidth) / 2;
-    //   const topRightX = topLeftX + valveTopWidth;
-    //   const topY = stemY - valveTrapezoidHeight;
-    //   group.path(`
-    //     M ${bottomLeftX} ${stemY}
-    //     L ${topLeftX} ${topY}
-    //     L ${topRightX} ${topY}
-    //     L ${bottomRightX} ${stemY}
-    //     Z
-    //   `)
-    //     .fill('#000')
-    //     .stroke({ color: '#444', width: 1 });
-    
-    //   return group;
-    // }
-    
     function createVerticalValve(x, y, valveId) {
       const group = draw.group();
       
@@ -400,14 +358,22 @@ function createGasCylinder(x, y, label) {
         .fill('#000')
         .stroke({ color: '#444', width: 1 });
         
+        // Store the knob reference in the valve state
+        valveStates[valveId].knob = knob;
+        
         // Add click handler to toggle valve state
         group.on('click', function() {
-          valveStates[valveId].isOpen = !valveStates[valveId].isOpen;
-          const isOpen = valveStates[valveId].isOpen;
+          const isOpen = !valveStates[valveId].isOpen;
+          valveStates[valveId].isOpen = isOpen;
+          
+          // Update knob color based on valve state
+          if (isOpen) {
+            knob.animate(300).fill('#ffa500'); // Orange when open
+          } else {
+            knob.animate(300).fill('#000000'); // Black when closed
+          }
           
           if (isOpen) {
-            knob.animate(300).fill('#ffa500'); // Red when open
-            
             // Handle different valve types
             if (valveId.startsWith('tankValve')) {
               const tankNum = valveId.replace('tankValve', '');
@@ -451,8 +417,6 @@ function createGasCylinder(x, y, label) {
               }
             }
           } else {
-            knob.animate(300).fill('#000000'); // Black when closed
-            
             // Stop animations when valve closes
             if (valveId.startsWith('tankValve')) {
               const tankNum = valveId.replace('tankValve', '');
@@ -527,7 +491,7 @@ function createGasCylinder(x, y, label) {
         .center(x, y);
         
         if (controller) {
-          // Create pointer group.
+          // Create pointer group
           const pointerGroup = group.group();
           const pointerLength = radius - interactiveValvePointerOffset;
           pointerGroup.polygon(`${pointerLength},0 0,-5 0,5`)
@@ -536,7 +500,7 @@ function createGasCylinder(x, y, label) {
           pointerGroup.center(x, y);
           
           let currentAngleIndex = 0;
-          pointerGroup.rotate(entryAngles[currentAngleIndex], x, y);
+          pointerGroup.rotate(270, x, y); // Initialize to 270 degrees
           
           const entryAngles1 = [90, 90, 90, 90];
           group.on('click', function() {
@@ -544,7 +508,6 @@ function createGasCylinder(x, y, label) {
             const targetAngle = entryAngles[currentAngleIndex];
             currentMultiValvePosition = targetAngle;
             pointerGroup.animate(300).rotate(entryAngles1[currentAngleIndex], x, y);
-          
             
             // Check if we should start MFC flow for the new position
             checkAndStartMFCFlow();
@@ -898,6 +861,9 @@ function createGasCylinder(x, y, label) {
           
           
           function drawPipes() {
+            // Clear existing pipe group
+            pipeGroup.clear();
+            
             // Example pipe path for Tank 1
             let startX = 62.5;
             let startY = canvasHeight - mainCylHeight - 42.5;
@@ -1132,7 +1098,7 @@ function createGasCylinder(x, y, label) {
           function drawInteractiveValveOnMiddleTank() {
             const x = tanksMarginX + mainCylWidth + tanksGap + (mainCylWidth / 2) - 2.5;
             const y = canvasHeight - mainCylHeight - 250;
-            createInteractiveValve(x, y);
+            interactiveValveKnob = createInteractiveValve(x, y);
           }
           
           function createVerticalAdsorptionBedView(x, y) {
@@ -1720,3 +1686,76 @@ function createGasCylinder(x, y, label) {
                 
                 // Finally draw everything
                 drawCanvas();
+
+// Add this function after the global variables
+function resetEverything() {
+  // Stop all timers
+  if (moleFractionTimer) {
+    clearInterval(moleFractionTimer);
+    moleFractionTimer = null;
+  }
+  
+  // Reset all global variables
+  currentMultiValvePosition = 270; // Initial position
+  mfcValue = 15.0; // Default MFC value
+  startTime = null;
+  desorbing = false;
+  timeOfDesorption = 0;
+  timeWhenAdsorptionStopped = null;
+  prevTankNum = null;
+  
+  // Stop heating
+  stopHeating();
+  
+  // Clear the canvas
+  draw.clear();
+  
+  // Recreate the pipe group
+  pipeGroup = draw.group();
+  
+  // Redraw all components
+  drawPipes();
+  drawThreeTanks();
+  drawValvesOnGauges(25, 'tankValve');
+  drawPressureGaugesAboveTanks();
+  drawValvesOnGauges(undefined, 'pressureValve');
+  
+  // Create the interactive valve on middle tank
+  const x = tanksMarginX + mainCylWidth + tanksGap + (mainCylWidth / 2) - 2.5;
+  const y = canvasHeight - mainCylHeight - 250;
+  interactiveValveKnob = createInteractiveValve(x, y);
+  
+  // Create other components with proper positioning
+  createMassFlowController(350, 0);
+  createInteractiveValve(475, 87.5, false);
+  createDigitalPressureGauge(550, 55, "100 psi");
+  createVerticalAdsorptionBedView(550, 150);
+  createInteractiveValve(600, 400, false, true);
+  createCO2GasAnalyzer(700, 450, "00.00%");
+  createTValveFromImage(620, 370);
+  createVentArrow(465, 5, 270, 40);
+  createVentArrow(870, 485, 0, 40);
+  
+  // Reset all gauge values
+  Object.keys(gaugeValues).forEach(gaugeId => {
+    gaugeValues[gaugeId] = 0.1; // Reset to default pressure
+  });
+  
+  // Reset valve states
+  Object.keys(valveStates).forEach(valveId => {
+    valveStates[valveId].isOpen = false;
+  });
+  
+  // Reset flow paths
+  Object.keys(flowPaths).forEach(segmentId => {
+    if (flowPaths[segmentId]) {
+      flowPaths[segmentId].remove();
+      delete flowPaths[segmentId];
+    }
+  });
+  
+  console.log('System reset to initial state');
+}
+
+// Add this to your existing code where you set up the reset button
+document.getElementById('reset-button').addEventListener('click', resetEverything);
