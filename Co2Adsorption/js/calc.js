@@ -149,7 +149,7 @@ export function findAdsorbTime(args) {
     return 0;
   }
 
-  for (let t = 0; t < 12000; t += tStep) {
+  for (let t = 0; t < 1200; t += tStep) {
     const outlet = yCO2_out({
       t: t,
       tStep: tStep,
