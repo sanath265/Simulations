@@ -1,3 +1,5 @@
+const timeMultiplicationFactor = 25;
+
 /**
  * Calculate the amount of CO2 adsorbed on a surface
  * as a function of time using a first-order rate equation.
@@ -73,9 +75,6 @@ function cCO2(args) {
  * @returns {number} - The outlet mole fraction of CO2 in the gas mixture.
  */
 export function yCO2_out(args) {
-  // Time was multiplied by 20 to allow students to take measurements
-  // within a reasonable time frame.
-  const timeMultiplicationFactor = 10;
   let t = args.t * timeMultiplicationFactor;
   const tStep = args.tStep * timeMultiplicationFactor;
   const m = args.m;
@@ -97,9 +96,7 @@ export function yCO2_out(args) {
     t = timeOfDesorption;
   }
 
-  const R = 0.08314; // L * bar / (K * mol)
-
-  const mZeolite = 0.005; // mass of zeolite, kg - tuned for a 20x increase in time
+  const mZeolite = 0.005; // mass of zeolite, kg
   const nBinding = 12; // maximum adsorption capacity (12 mmol / g)
   const nMax = mZeolite * nBinding; // maximum number of moles of CO2 that can be adsorbed
 
@@ -122,6 +119,56 @@ export function yCO2_out(args) {
     yOut = yOut * thetaDesorbed;
     return yOut;
   }
+}
+
+/**
+ * Find the time required to adsorb a certain amount of CO2
+ * to the zeolite membrane.
+ * 
+ * @param {Object} args - The arguments object.
+ * @param {number} args.tStep - The time step in seconds.
+ * @param {number} args.m - The mass flow rate of the gas mixture in g / s.
+ * @param {number} args.P - The total pressure of the gas mixture in bar.
+ * @param {number} args.T - The temperature of the gas mixture in K.
+ * @param {number} args.yTarget - The target mole fraction of CO2 in the gas mixture.
+ * @param {number} args.yCO2 - The initial mole fraction of CO2 in the gas mixture.
+ * @returns {number} - The time required to adsorb the target amount of CO2 in seconds.
+ */
+export function findAdsorbTime(args) {
+  const tStep = args.tStep * timeMultiplicationFactor;
+  const m = args.m;
+  const P = args.P;
+  const T = args.T;
+  const yTarget = args.yTarget;
+  const yCO2 = args.yCO2;
+
+  let err = 1e9;
+  let tResult = 0;
+
+  if (yTarget <= 0) {
+    return 0;
+  }
+
+  for (let t = 0; t < 12000; t += tStep) {
+    const outlet = yCO2_out({
+      t: t,
+      tStep: tStep,
+      m: m,
+      P: P,
+      T: T,
+      yCO2: yCO2,
+      desorbing: false,
+      timeOfDesorption: 0
+    });
+
+    const diff = Math.abs(outlet - yTarget);
+    if (diff < err) {
+      err = diff;
+      tResult = t;
+    }
+  }
+
+  return tResult
 }
 
 /**
