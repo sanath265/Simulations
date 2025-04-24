@@ -306,7 +306,7 @@ export function showMFCZoomedView() {
 }
 
 // --- Digital Pressure Gauge Update ---
-export function updateDigitalPressureGauge(tankNum) {
+export function updateDigitalPressureGauge(tankNum, isFlowActive = true) {
     const gauge = document.querySelector('.digital-pressure-gauge');
     if (!gauge) {
         console.warn('Digital pressure gauge element not found');
@@ -318,9 +318,8 @@ export function updateDigitalPressureGauge(tankNum) {
     const gauge2Value = state.getGaugeValue('gauge2', 0.1);
     const gauge3Value = state.getGaugeValue('gauge3', 0.1);
     
-    // Check if there's any active flow in the pipes
+    // Check if there's any active flow at the pipes
     const activeFlows = state.getAllFlowPaths();
-    const isFlowActive = Object.keys(activeFlows).length > 0;
     
     // Get the currently selected tank from multi-valve position
     const currentTank = getTankFromMultiValvePosition(state.getCurrentMultiValvePosition());
@@ -333,7 +332,7 @@ export function updateDigitalPressureGauge(tankNum) {
     }
     
     // Only show pressure for the tank that's currently flowing, show 0 for others
-    if (isFlowActive && currentTank === tankNum.toString()) {
+    if (currentTank === tankNum.toString() && isFlowActive) {
         let pressureValue;
         switch (tankNum) {
             case 1:

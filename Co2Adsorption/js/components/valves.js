@@ -118,9 +118,6 @@ export function createVerticalValve(draw, x, y, valveId) {
 
         // Update the digital pressure gauge after valve state changes
         const tankNum = valveId.replace(/[^0-9]/g, '');
-        if (tankNum) {
-            updateDigitalPressureGauge(parseInt(tankNum));
-        }
     });
 
     return group;
@@ -184,14 +181,12 @@ export function createInteractiveValve(draw, x, y, controller = true, isThreeVal
             // Animate the pointer rotation
             pointerGroup.animate(300).rotate(entryAngles1[currentAngleIndex], x, y);
 
-            // Check if we should start/stop MFC flow for the new position
-            checkAndStartMFCFlow(draw);
+            // Check if we should start/stop MFC flow for the new positio
 
             // Update pressure gauge based on new position
             const tankNum = getTankFromMultiValvePosition(targetAngle);
-            if (tankNum) {
-                updateDigitalPressureGauge(parseInt(tankNum));
-            }
+            updateDigitalPressureGauge(parseInt(tankNum), false);
+            checkAndStartMFCFlow(draw);
         });
         // Store reference if this is the main controllable valve
         state.setInteractiveValveKnobElement(group);

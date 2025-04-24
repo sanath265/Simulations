@@ -315,10 +315,6 @@ export function checkAndStartMFCFlow(draw) {
             updateDigitalPressureGauge(parseInt(tankNum));
         } else {
             console.log(`Flow check: Tank ${tankNum} selected, but one or both valves are closed.`);
-            // No flow started, simulation already stopped.
-            
-            // Update pressure gauge to show 0 when flow stops
-            updateDigitalPressureGauge(parseInt(tankNum));
         }
     } else {
         console.log(`Flow check: No valid tank selected (Position: ${state.getCurrentMultiValvePosition()}).`);
