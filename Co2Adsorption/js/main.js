@@ -11,6 +11,7 @@ import { createMassFlowController } from './components/mfc.js';
 import { createVerticalAdsorptionBedView } from './components/adsorptionBed.js';
 import { createCO2GasAnalyzer } from './components/co2Analyzer.js';
 import { createVentArrow } from './components/ventArrow.js';
+import { addOptionToDragAndZoom } from './zoom.js';
 
 // --- Global Canvas Setup ---
 let windowWidth = window.innerWidth - 60;
@@ -32,7 +33,7 @@ function drawCanvas() {
     // --- 1. Calculate Key Positions ---
     const tankY = config.canvasHeight - config.mainCylHeight;
     const gaugeY = config.canvasHeight - config.mainCylHeight - config.pressureGaugeOffset;
-    const multiValveX = config.tanksMarginX + config.mainCylWidth + config.tanksGap + (config.mainCylWidth / 2) - 2.5;
+    const multiValveX = config.tanksMarginX + config.mainCylWidth + config.tanksGap + (config.mainCylWidth / 2);
     const multiValveY = config.canvasHeight - config.mainCylHeight - 250;
 
     // Calculate Y positions for vertical valves (needed before creating them)
@@ -61,27 +62,27 @@ function drawCanvas() {
     createGasCylinder(draw, config.tanksMarginX + 2 * (config.mainCylWidth + config.tanksGap), tankY, "N2");
 
     // Create Tank Valves (Initialize state with position)
-    const tv1_x = config.tanksMarginX + config.mainCylWidth / 2 - config.verticalValveBlockWidth / 2 - 2.5;
+    const tv1_x = config.tanksMarginX + config.mainCylWidth / 2 - config.verticalValveBlockWidth / 2;
     createVerticalValve(draw, tv1_x, tv1_y, 'tankValve1');
-    const tv2_x = config.tanksMarginX + config.mainCylWidth + config.tanksGap + config.mainCylWidth / 2 - config.verticalValveBlockWidth / 2 - 2.5;
+    const tv2_x = config.tanksMarginX + config.mainCylWidth + config.tanksGap + config.mainCylWidth / 2 - config.verticalValveBlockWidth / 2;
     createVerticalValve(draw, tv2_x, tv1_y, 'tankValve2'); // Use same Y
-    const tv3_x = config.tanksMarginX + 2 * (config.mainCylWidth + config.tanksGap) + config.mainCylWidth / 2 - config.verticalValveBlockWidth / 2 - 2.5;
+    const tv3_x = config.tanksMarginX + 2 * (config.mainCylWidth + config.tanksGap) + config.mainCylWidth / 2 - config.verticalValveBlockWidth / 2;
     createVerticalValve(draw, tv3_x, tv1_y, 'tankValve3'); // Use same Y
 
     // Create Pressure Gauges (Connected style)
-    const gauge1X = config.tanksMarginX + config.mainCylWidth / 2 - config.connectedGaugeSize / 2  - 2.5;
+    const gauge1X = config.tanksMarginX + config.mainCylWidth / 2 - config.connectedGaugeSize / 2;
     createConnectedGauges(draw, gauge1X, gaugeY, 'gauge1');
-    const gauge2X = config.tanksMarginX + config.mainCylWidth + config.tanksGap + config.mainCylWidth / 2 - config.connectedGaugeSize / 2 - 2.5;
+    const gauge2X = config.tanksMarginX + config.mainCylWidth + config.tanksGap + config.mainCylWidth / 2 - config.connectedGaugeSize / 2;
     createConnectedGauges(draw, gauge2X, gaugeY, 'gauge2');
-    const gauge3X = config.tanksMarginX + 2 * (config.mainCylWidth + config.tanksGap) + config.mainCylWidth / 2 - config.connectedGaugeSize / 2 - 2.5;
+    const gauge3X = config.tanksMarginX + 2 * (config.mainCylWidth + config.tanksGap) + config.mainCylWidth / 2 - config.connectedGaugeSize / 2;
     createConnectedGauges(draw, gauge3X, gaugeY, 'gauge3');
 
     // Create Pressure Valves (Initialize state with position)
-    const pv1_x = config.tanksMarginX + config.mainCylWidth / 2 - config.verticalValveBlockWidth / 2 - 2.5;
+    const pv1_x = config.tanksMarginX + config.mainCylWidth / 2 - config.verticalValveBlockWidth / 2;
     createVerticalValve(draw, pv1_x, pv_y, 'pressureValve1');
-    const pv2_x = config.tanksMarginX + config.mainCylWidth + config.tanksGap + config.mainCylWidth / 2 - config.verticalValveBlockWidth / 2 - 2.5;
+    const pv2_x = config.tanksMarginX + config.mainCylWidth + config.tanksGap + config.mainCylWidth / 2 - config.verticalValveBlockWidth / 2;
     createVerticalValve(draw, pv2_x, pv_y, 'pressureValve2'); // Use same Y
-    const pv3_x = config.tanksMarginX + 2 * (config.mainCylWidth + config.tanksGap) + config.mainCylWidth / 2 - config.verticalValveBlockWidth / 2 - 2.5;
+    const pv3_x = config.tanksMarginX + 2 * (config.mainCylWidth + config.tanksGap) + config.mainCylWidth / 2 - config.verticalValveBlockWidth / 2;
     createVerticalValve(draw, pv3_x, pv_y, 'pressureValve3'); // Use same Y
 
     // Create Multi-Position Valve (Controller)
@@ -116,7 +117,7 @@ function drawCanvas() {
     // This now uses the component positions stored in state by the create functions above
     console.log("Drawing pipes...");
     drawPipes(draw, pipeGroup); // Draw pipes LAST
-
+    addOptionToDragAndZoom(draw);
     console.log("Canvas drawing complete.");
 }
 

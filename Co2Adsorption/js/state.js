@@ -26,6 +26,9 @@ export let heatingInterval = null; // Interval ID
 export let co2AnalyzerElement = null; // Reference to the SVG group for CO2 Analyzer
 export let interactiveValveKnobElement = null; // Reference to the main interactive valve SVG group
 
+export let isPanning = false;
+export let panStart = { x: 0, y: 0 };
+
 // --- State Management Functions ---
 export function setValveState(valveId, isOpen, position, knob = null) {
   valveStates[valveId] = { isOpen, position };
@@ -211,3 +214,7 @@ export function resetDrawingState() {
 }
 
 export function setOutletMoleFraction(value) { outletMoleFraction = value; }
+export function setIsPanning(value) { isPanning = value; }
+export function getIsPanning() { return isPanning; }
+export function setPanStart(value) { panStart = value; }
+export function getPanStart() { return panStart; }

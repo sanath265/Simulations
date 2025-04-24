@@ -41,7 +41,7 @@ export const interactiveValveRadius = 25;
 export const interactiveValveMarkerOffset = 3;
 export const interactiveValvePointerOffset = 5;
 
-export const tanksMarginX = 35;
+export const tanksMarginX = 32.5;
 export const tanksGap = 40;
 
 export const pressureGaugeOffset = 150;
