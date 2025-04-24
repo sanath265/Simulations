@@ -17,6 +17,8 @@ export let timeOfDesorption = 0; // Simulation state (seconds)
 export let timeWhenAdsorptionStopped = null; // Simulation state (seconds)
 export let prevTankNum = null; // Tracks last CO2 tank used ('1' or '2')
 
+export let outletMoleFraction = 0;
+
 export let isHeating = false; // Adsorption bed state
 export let heatingInterval = null; // Interval ID
 
@@ -26,108 +28,109 @@ export let interactiveValveKnobElement = null; // Reference to the main interact
 
 // --- State Management Functions ---
 export function setValveState(valveId, isOpen, position, knob = null) {
-    valveStates[valveId] = { isOpen, position };
-    if (knob) {
-        valveStates[valveId].knob = knob;
-    }
+  valveStates[valveId] = { isOpen, position };
+  if (knob) {
+    valveStates[valveId].knob = knob;
+  }
 }
 export function updateValveOpenState(valveId, isOpen) {
-    if (valveStates[valveId]) {
-        valveStates[valveId].isOpen = isOpen;
-        // Update knob color visually (might be better handled directly in the valve click handler)
-        const knob = valveStates[valveId].knob;
-        if (knob && typeof knob.animate === 'function') { // Check if knob exists and is animatable
-            const color = isOpen ? '#ffa500' : '#000000';
-            knob.animate(300).fill(color);
-        } else if (knob) { // Fallback if animate isn't available (e.g., during reset redraw)
-             const color = isOpen ? '#ffa500' : '#000000';
-             knob.fill(color);
-        }
-    } else {
-        console.warn(`Valve state for ${valveId} not found.`);
+  if (valveStates[valveId]) {
+    valveStates[valveId].isOpen = isOpen;
+    // Update knob color visually (might be better handled directly in the valve click handler)
+    const knob = valveStates[valveId].knob;
+    if (knob && typeof knob.animate === 'function') { // Check if knob exists and is animatable
+      const color = isOpen ? '#ffa500' : '#000000';
+      knob.animate(300).fill(color);
+    } else if (knob) { // Fallback if animate isn't available (e.g., during reset redraw)
+      const color = isOpen ? '#ffa500' : '#000000';
+      knob.fill(color);
     }
+  } else {
+    console.warn(`Valve state for ${valveId} not found.`);
+  }
 }
 export function getValveState(valveId) {
-    return valveStates[valveId];
+  return valveStates[valveId];
 }
 export function resetValveStates() {
-    Object.keys(valveStates).forEach(id => {
-        if (valveStates[id]) {
-             valveStates[id].isOpen = false;
-             const knob = valveStates[id].knob;
-             // Check if knob exists and has a fill method before calling it
-             if (knob && typeof knob.fill === 'function') {
-                 knob.fill('#000000'); // Reset color
-             }
-        }
-    });
-     console.log("Valve states reset."); // Optional log
+  Object.keys(valveStates).forEach(id => {
+    if (valveStates[id]) {
+      valveStates[id].isOpen = false;
+      const knob = valveStates[id].knob;
+      // Check if knob exists and has a fill method before calling it
+      if (knob && typeof knob.fill === 'function') {
+        knob.fill('#000000'); // Reset color
+      }
+    }
+  });
+  console.log("Valve states reset."); // Optional log
 }
 
 export async function setGaugeValue(gaugeId, value) {
-    gaugeValues[gaugeId] = value;
-    // Update the digital pressure gauge display whenever a gauge value changes
-    const { updateDigitalPressureGauge } = await import('./calculations.js');
-    updateDigitalPressureGauge();
+  gaugeValues[gaugeId] = value;
+  // Update the digital pressure gauge display whenever a gauge value changes
+  const { updateDigitalPressureGauge } = await
+  import ('./calculations.js');
+  updateDigitalPressureGauge();
 }
 export function getGaugeValue(gaugeId, defaultValue = 0.1) {
-    return gaugeValues[gaugeId] ?? defaultValue;
+  return gaugeValues[gaugeId] ?? defaultValue;
 }
 export function resetGaugeValues() {
-    Object.keys(gaugeValues).forEach(id => gaugeValues[id] = 0.1);
-    console.log("Gauge values reset."); // Optional log
+  Object.keys(gaugeValues).forEach(id => gaugeValues[id] = 0.1);
+  console.log("Gauge values reset."); // Optional log
 }
 
 // --- NEWLY ADDED FUNCTION ---
 export function resetPipeSegments() {
-    // Clear the object holding references to the base pipe elements
-    // Reassigning the variable *within its own module* is allowed.
-    pipeSegments = {};
-    console.log("Pipe segments cache reset."); // Optional log
+  // Clear the object holding references to the base pipe elements
+  // Reassigning the variable *within its own module* is allowed.
+  pipeSegments = {};
+  console.log("Pipe segments cache reset."); // Optional log
 }
 // --- END NEW FUNCTION ---
 
 // --- Flow Path Functions ---
 export function setFlowPath(segmentId, pathElement, isMFCControlled = false, color = 'grey', opacity = 1) {
-    if (pathElement) {
-        // Store additional info directly on the element or in a wrapper object
-        pathElement.isMFCControlled = isMFCControlled;
-        pathElement.flowColor = color;
-        pathElement.flowOpacity = opacity;
-        flowPaths[segmentId] = pathElement;
-    } else {
-         delete flowPaths[segmentId];
-    }
+  if (pathElement) {
+    // Store additional info directly on the element or in a wrapper object
+    pathElement.isMFCControlled = isMFCControlled;
+    pathElement.flowColor = color;
+    pathElement.flowOpacity = opacity;
+    flowPaths[segmentId] = pathElement;
+  } else {
+    delete flowPaths[segmentId];
+  }
 }
 export function removeFlowPath(segmentId) {
-    // Check if path exists and has a remove method before calling
-    if (flowPaths[segmentId] && typeof flowPaths[segmentId].remove === 'function') {
-        flowPaths[segmentId].remove();
-    }
-    delete flowPaths[segmentId]; // Always remove from tracking object
+  // Check if path exists and has a remove method before calling
+  if (flowPaths[segmentId] && typeof flowPaths[segmentId].remove === 'function') {
+    flowPaths[segmentId].remove();
+  }
+  delete flowPaths[segmentId]; // Always remove from tracking object
 }
 export function removeAllFlowPaths() {
-     Object.keys(flowPaths).forEach(id => {
-        if (flowPaths[id] && typeof flowPaths[id].remove === 'function') {
-             flowPaths[id].remove(); // Remove SVG element if stored and possible
-        }
-     });
-     flowPaths = {}; // Clear the tracking object
-     console.log("Flow paths reset."); // Optional log
+  Object.keys(flowPaths).forEach(id => {
+    if (flowPaths[id] && typeof flowPaths[id].remove === 'function') {
+      flowPaths[id].remove(); // Remove SVG element if stored and possible
+    }
+  });
+  flowPaths = {}; // Clear the tracking object
+  console.log("Flow paths reset."); // Optional log
 }
 export function getFlowPath(segmentId) {
-    return flowPaths[segmentId];
+  return flowPaths[segmentId];
 }
 export function getAllFlowPaths() {
-    return flowPaths;
+  return flowPaths;
 }
 
 // --- Pipe Segment Functions ---
 export function setPipeSegment(segmentId, pathElement) {
-    pipeSegments[segmentId] = pathElement;
+  pipeSegments[segmentId] = pathElement;
 }
 export function getPipeSegment(segmentId) {
-    return pipeSegments[segmentId];
+  return pipeSegments[segmentId];
 }
 
 // --- MFC Value/Speed ---
@@ -150,8 +153,8 @@ export function getInteractiveValveKnobElement() { return interactiveValveKnobEl
 export function setMoleFractionTimer(timerId) { moleFractionTimer = timerId; }
 export function getMoleFractionTimer() { return moleFractionTimer; }
 export function clearMoleFractionTimer() {
-    if (moleFractionTimer) clearInterval(moleFractionTimer);
-    moleFractionTimer = null;
+  if (moleFractionTimer) clearInterval(moleFractionTimer);
+  moleFractionTimer = null;
 }
 
 export function setStartTime(time) { startTime = time; }
@@ -174,35 +177,37 @@ export function getIsHeating() { return isHeating; }
 export function setHeatingInterval(intervalId) { heatingInterval = intervalId; }
 export function getHeatingInterval() { return heatingInterval; }
 export function clearHeatingInterval() {
-    if (heatingInterval) clearInterval(heatingInterval);
-    heatingInterval = null;
+  if (heatingInterval) clearInterval(heatingInterval);
+  heatingInterval = null;
 }
 
 // --- Master Reset for Simulation State ---
 export function resetSimulationState() {
-    clearMoleFractionTimer();
-    clearHeatingInterval();
-    startTime = null;
-    desorbing = false;
-    timeOfDesorption = 0;
-    timeWhenAdsorptionStopped = null;
-    prevTankNum = null;
-    isHeating = false;
-    mfcValue = 15.0; // Reset MFC value
-    mfcFlowSpeed = 50; // Reset flow speed
-    currentMultiValvePosition = 270; // Reset valve position
-    console.log("Simulation state reset."); // Optional log
+  clearMoleFractionTimer();
+  clearHeatingInterval();
+  startTime = null;
+  desorbing = false;
+  timeOfDesorption = 0;
+  timeWhenAdsorptionStopped = null;
+  prevTankNum = null;
+  isHeating = false;
+  mfcValue = 15.0; // Reset MFC value
+  mfcFlowSpeed = 50; // Reset flow speed
+  currentMultiValvePosition = 270; // Reset valve position
+  console.log("Simulation state reset."); // Optional log
 }
 
 // --- Optional Combined Reset for Drawing-related State ---
 // Call this from reset.js if preferred over individual calls
 export function resetDrawingState() {
-     resetValveStates();
-     resetGaugeValues();
-     removeAllFlowPaths();
-     resetPipeSegments();
-     // Reset element references? Usually unnecessary if elements are recreated.
-     // co2AnalyzerElement = null;
-     // interactiveValveKnobElement = null;
-     console.log("Drawing-related state reset."); // Optional log
+  resetValveStates();
+  resetGaugeValues();
+  removeAllFlowPaths();
+  resetPipeSegments();
+  // Reset element references? Usually unnecessary if elements are recreated.
+  // co2AnalyzerElement = null;
+  // interactiveValveKnobElement = null;
+  console.log("Drawing-related state reset."); // Optional log
 }
+
+export function setOutletMoleFraction(value) { outletMoleFraction = value; }
