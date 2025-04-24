@@ -3,6 +3,7 @@ import * as config from '../config.js';
 import * as state from '../state.js';
 import { getTankFromMultiValvePosition } from '../utils.js';
 import { checkAndStartMFCFlow, animateGasFlow } from '../pipes.js'; // Import pipe functions
+import { updateDigitalPressureGauge } from '../uiInteractions.js';
 
 export function createVerticalValve(draw, x, y, valveId) {
     
@@ -86,8 +87,8 @@ export function createVerticalValve(draw, x, y, valveId) {
                     const opacity = tankNum === '1' ? 0.9 : 0.5;
                     animateGasFlow(draw, `tank${tankNum}_seg4`, color, opacity);
                 }
-                 // Start MFC flow if this tank is selected
-                 if (currentTankSelected === tankNum) {
+                // Start MFC flow if this tank is selected
+                if (currentTankSelected === tankNum) {
                     checkAndStartMFCFlow(draw);
                 }
             }
@@ -114,6 +115,12 @@ export function createVerticalValve(draw, x, y, valveId) {
                 }
             }
         }
+
+        // Update the digital pressure gauge after valve state changes
+        const tankNum = valveId.replace(/[^0-9]/g, '');
+        if (tankNum) {
+            updateDigitalPressureGauge(parseInt(tankNum));
+        }
     });
 
     return group;
@@ -122,7 +129,7 @@ export function createVerticalValve(draw, x, y, valveId) {
 export function createInteractiveValve(draw, x, y, controller = true, isThreeValve = false) {
     const group = draw.group();
     const radius = config.interactiveValveRadius;
-
+    
     // Define initial entry positions (in degrees)
     // Tank positions: 1 at 180°, 2 at 90°, 3 at 0°, Outlet at 270°
     const entryAngles = [270, 0, 90, 180];
@@ -165,9 +172,9 @@ export function createInteractiveValve(draw, x, y, controller = true, isThreeVal
         pointerGroup.center(x, y); // Position pivot point at valve center
 
         let currentAngleIndex = 0;
-          pointerGroup.rotate(270, x, y); // Initialize to 270 degrees
-          
-          const entryAngles1 = [90, 90, 90, 90]; // Initialize to current state or default
+        pointerGroup.rotate(270, x, y); // Initialize to 270 degrees
+        
+        const entryAngles1 = [90, 90, 90, 90]; // Initialize to current state or default
 
         group.on('click', function() {
             currentAngleIndex = (currentAngleIndex + 1) % entryAngles.length;
@@ -175,14 +182,19 @@ export function createInteractiveValve(draw, x, y, controller = true, isThreeVal
             state.setCurrentMultiValvePosition(targetAngle); // Update global state
 
             // Animate the pointer rotation
-            // The rotation amount is the difference, but rotate() sets absolute angle
             pointerGroup.animate(300).rotate(entryAngles1[currentAngleIndex], x, y);
 
             // Check if we should start/stop MFC flow for the new position
-             checkAndStartMFCFlow(draw);
+            checkAndStartMFCFlow(draw);
+
+            // Update pressure gauge based on new position
+            const tankNum = getTankFromMultiValvePosition(targetAngle);
+            if (tankNum) {
+                updateDigitalPressureGauge(parseInt(tankNum));
+            }
         });
-         // Store reference if this is the main controllable valve
-         state.setInteractiveValveKnobElement(group);
+        // Store reference if this is the main controllable valve
+        state.setInteractiveValveKnobElement(group);
     }
 
     return group;

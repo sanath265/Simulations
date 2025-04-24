@@ -3,6 +3,7 @@ import * as config from './config.js';
 import * as state from './state.js';
 import { getTankFromMultiValvePosition } from './utils.js';
 import { startMoleFractionCalculation, stopMoleFractionCalculation } from './simulation.js';
+import { updateDigitalPressureGauge } from './uiInteractions.js';
 
 // Helper to draw the pipe layers (outline and fill)
 function drawPipeLayer(draw, pipeGroup, pathString, width, color, linejoin = 'round', isOutline = false) {
@@ -310,9 +311,14 @@ export function checkAndStartMFCFlow(draw) {
                 }, true);
             }, true); // isMFCControlled = true
             
+            // Update pressure gauge when flow starts
+            updateDigitalPressureGauge(parseInt(tankNum));
         } else {
             console.log(`Flow check: Tank ${tankNum} selected, but one or both valves are closed.`);
             // No flow started, simulation already stopped.
+            
+            // Update pressure gauge to show 0 when flow stops
+            updateDigitalPressureGauge(parseInt(tankNum));
         }
     } else {
         console.log(`Flow check: No valid tank selected (Position: ${state.getCurrentMultiValvePosition()}).`);

@@ -110,11 +110,10 @@ export function createConnectedGauges(draw, x, y, gaugeId) {
   group.add(leftGauge);
   group.add(rightGauge);
   group.add(hexagon);
+  state.setGaugeValue(gaugeId, 5);
 
   return group;
 }
-
-
 
 export function createDigitalPressureGauge(draw, x, y, pressure = "--- bar") {
   const group = draw.group();
@@ -140,13 +139,14 @@ export function createDigitalPressureGauge(draw, x, y, pressure = "--- bar") {
   // Get current pressure values and calculate sum
   const totalPressure = `0.0`;
 
-  // Create text element for total pressure
+  // Create text element for total pressure with a specific class
   const fontSize = Math.min(displayWidth * 0.3, displayHeight * 0.6); // Larger font size for single value
 
   group.text(`${totalPressure}`)
     .font({ family: 'monospace', size: fontSize, anchor: 'middle', weight: 'bold' })
     .fill('#ff0000')
-    .center(x, y);
+    .center(x, y)
+    .addClass('pressure-display'); // Add class to identify this text element
 
   // Bottom Connector
   const connectorWidth = 10;

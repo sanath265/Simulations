@@ -1,6 +1,7 @@
 // js/uiInteractions.js
 import * as state from './state.js';
 import { updateMFCFlowSpeed } from './components/mfc.js'; // Import MFC logic
+import { getTankFromMultiValvePosition } from './utils.js'; // Import from utils.js
 
 // --- Gauge Input Popup ---
 export function showGaugeInput(screenX, screenY, gaugeId) {
@@ -33,10 +34,10 @@ export function showGaugeInput(screenX, screenY, gaugeId) {
     // Input field
     const input = document.createElement('input');
     input.type = 'number';
-    input.min = '0.1';
+    input.min = '1';
     input.max = '10'; // Max pressure in bar
-    input.step = '0.1';
-    input.value = state.getGaugeValue(gaugeId, 0.1); // Get current value from state
+    input.step = '1';
+    input.value = state.getGaugeValue(gaugeId, 5); // Get current value from state
     input.style.width = '60px';
     input.style.marginRight = '5px';
 
@@ -305,20 +306,62 @@ export function showMFCZoomedView() {
 }
 
 // --- Digital Pressure Gauge Update ---
-export function updateDigitalPressureGauge() {
+export function updateDigitalPressureGauge(tankNum) {
     const gauge = document.querySelector('.digital-pressure-gauge');
-    if (!gauge) return;
+    if (!gauge) {
+        console.warn('Digital pressure gauge element not found');
+        return;
+    }
     
     // Get current pressure values
     const gauge1Value = state.getGaugeValue('gauge1', 0.1);
     const gauge2Value = state.getGaugeValue('gauge2', 0.1);
     const gauge3Value = state.getGaugeValue('gauge3', 0.1);
     
-    // Update all text elements in the gauge
-    const textElements = gauge.querySelectorAll('text');
-    if (textElements.length >= 3) {
-        textElements[1].textContent = `${(gauge1Value + gauge2Value + gauge3Value).toFixed(1)}`;
+    // Check if there's any active flow in the pipes
+    const activeFlows = state.getAllFlowPaths();
+    const isFlowActive = Object.keys(activeFlows).length > 0;
+    
+    // Get the currently selected tank from multi-valve position
+    const currentTank = getTankFromMultiValvePosition(state.getCurrentMultiValvePosition());
+    
+    // Find the pressure display text element
+    const pressureDisplay = gauge.querySelector('.pressure-display');
+    if (!pressureDisplay) {
+        console.warn('Pressure display text element not found in gauge');
+        return;
     }
+    
+    // Only show pressure for the tank that's currently flowing, show 0 for others
+    if (isFlowActive && currentTank === tankNum.toString()) {
+        let pressureValue;
+        switch (tankNum) {
+            case 1:
+                pressureValue = gauge1Value;
+                break;
+            case 2:
+                pressureValue = gauge2Value;
+                break;
+            case 3:
+                pressureValue = gauge3Value;
+                break;
+            default:
+                pressureValue = 0.0;
+        }
+        pressureDisplay.textContent = `${pressureValue.toFixed(1)}`;
+        console.log("pressureValue", pressureValue);
+    } else {
+        pressureDisplay.textContent = '0.0';
+    }
+    
+    console.log(`Updated pressure gauge for tank ${tankNum}:`, {
+        isFlowActive,
+        currentTank,
+        pressure1: gauge1Value,
+        pressure2: gauge2Value,
+        pressure3: gauge3Value,
+        pressure: pressureDisplay.textContent
+    });
 }
 
 export function writeTextAtPosition(x, y, text, options = {}) {

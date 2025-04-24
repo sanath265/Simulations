@@ -72,9 +72,9 @@ export function resetValveStates() {
 export async function setGaugeValue(gaugeId, value) {
   gaugeValues[gaugeId] = value;
   // Update the digital pressure gauge display whenever a gauge value changes
-  const { updateDigitalPressureGauge } = await
-  import ('./calculations.js');
-  updateDigitalPressureGauge();
+  const { updateDigitalPressureGauge } = await import('./uiInteractions.js');
+  const tankNum = gaugeId.replace('gauge', '');
+  updateDigitalPressureGauge(parseInt(tankNum));
 }
 export function getGaugeValue(gaugeId, defaultValue = 0.1) {
   return gaugeValues[gaugeId] ?? defaultValue;
